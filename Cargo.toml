@@ -1,0 +1,16 @@
+[package]
+authors = ["eV <ev@7pr.xyz>"]
+edition = "2018"
+name = "challenge-bypass-ristretto"
+version = "0.1.0"
+
+[dependencies]
+clear_on_drop = "0.2.3"
+crypto-mac = "^0.6.0"
+curve25519-dalek = "0.21.0"
+digest = "^0.7.0"
+hmac = "^0.6.0"
+rand = "0.5.5"
+
+[dev-dependencies]
+sha2 = "^0.7"
