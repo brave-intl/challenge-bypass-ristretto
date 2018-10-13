@@ -1,6 +1,5 @@
 [package]
 authors = ["eV <ev@7pr.xyz>"]
-edition = "2018"
 name = "challenge-bypass-ristretto"
 version = "0.1.0"
 
