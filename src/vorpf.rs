@@ -12,19 +12,26 @@ use hmac::digest::{BlockInput, Input};
 use hmac::{Hmac, Mac};
 use rand::{CryptoRng, Rng};
 
-use crate::errors::{InternalError, TokenError};
+#[cfg(feature = "serde")]
+use serde::de::Error as SerdeError;
+#[cfg(feature = "serde")]
+use serde::de::Visitor;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde::{Deserializer, Serializer};
+
+use errors::{InternalError, TokenError};
 
 /// The length of a `BlindedToken`, in bytes.
 pub const BLINDED_TOKEN_LENGTH: usize = 32;
 
 #[cfg(test)]
 mod tests {
-    extern crate rand;
-    extern crate sha2;
-
-    use crate::vorpf::{SigningKey, Token};
     use rand::rngs::OsRng;
     use sha2::Sha512;
+
+    use super::*;
 
     #[test]
     fn it_works() {

@@ -34,6 +34,7 @@ impl Display for InternalError {
 }
 
 /// Errors when keys and/or tokens to or from wire formats, or verifying proofs.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct TokenError(pub(crate) InternalError);
 
 impl Display for TokenError {

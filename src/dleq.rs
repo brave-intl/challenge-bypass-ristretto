@@ -4,8 +4,8 @@ use digest::generic_array::typenum::U64;
 use digest::Digest;
 use rand::{CryptoRng, Rng};
 
-use crate::errors::InternalError;
-use crate::vorpf::SigningKey;
+use errors::InternalError;
+use vorpf::SigningKey;
 
 /// A `DLEQProof` is a proof of the equivalence of the discrete logarithm between two pairs of points.
 #[repr(C)]
