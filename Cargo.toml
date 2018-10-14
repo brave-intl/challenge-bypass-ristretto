@@ -4,6 +4,9 @@ edition = "2018"
 name = "challenge-bypass-ristretto"
 version = "0.1.0"
 
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "./rustdoc-include-katex-header.html"]
+
 [dependencies]
 clear_on_drop = "0.2.3"
 crypto-mac = "^0.6.0"
