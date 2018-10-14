@@ -180,6 +180,43 @@ impl BlindedToken {
     }
 }
 
+#[cfg(feature = "serde")]
+impl Serialize for BlindedToken {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(self.to_bytes())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'d> Deserialize<'d> for BlindedToken {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'d>,
+    {
+        struct BlindedTokenVisitor;
+
+        impl<'d> Visitor<'d> for BlindedTokenVisitor {
+            type Value = BlindedToken;
+
+            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                formatter.write_str("A blinded token must be 32 bytes.")
+            }
+
+            fn visit_bytes<E>(self, bytes: &[u8]) -> Result<BlindedToken, E>
+            where
+                E: SerdeError,
+            {
+                BlindedToken::from_bytes(bytes)
+                    .or(Err(SerdeError::invalid_length(bytes.len(), &self)))
+            }
+        }
+        deserializer.deserialize_bytes(BlindedTokenVisitor)
+    }
+}
+
 /// A `PublicKey` is a committment by the server to a particular `SigningKey`.
 #[repr(C)]
 #[derive(Debug)]

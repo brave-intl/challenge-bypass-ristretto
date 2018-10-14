@@ -17,6 +17,9 @@ extern crate digest;
 extern crate hmac;
 extern crate rand;
 
+#[cfg(feature = "serde")]
+extern crate serde;
+
 #[cfg(test)]
 extern crate sha2;
 
