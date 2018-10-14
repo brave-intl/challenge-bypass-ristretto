@@ -34,7 +34,7 @@ impl DLEQProof {
         Y: RistrettoPoint,
         P: RistrettoPoint,
         Q: RistrettoPoint,
-        k: SigningKey,
+        k: &SigningKey,
     ) -> Self
     where
         D: Digest<OutputSize = U64> + Default,
