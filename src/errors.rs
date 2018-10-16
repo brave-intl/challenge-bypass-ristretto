@@ -19,6 +19,8 @@ pub enum InternalError {
     },
     /// Verification failed
     VerifyError,
+    /// Inputs differed in length
+    LengthMismatchError,
 }
 
 impl Display for InternalError {
@@ -29,6 +31,7 @@ impl Display for InternalError {
                 write!(f, "{} must be {} bytes in length", n, l)
             }
             InternalError::VerifyError => write!(f, "Verification failed"),
+            InternalError::LengthMismatchError => write!(f, "Inputs differed in length"),
         }
     }
 }

@@ -156,7 +156,7 @@ impl Token {
 /// \\(P = T^r = H_1(t)^r\\)
 #[repr(C)]
 #[derive(Debug)]
-pub struct BlindedToken(CompressedRistretto);
+pub struct BlindedToken(pub(crate) CompressedRistretto);
 
 impl BlindedToken {
     /// Convert this `BlindedToken` to a byte array.
@@ -222,11 +222,11 @@ impl<'d> Deserialize<'d> for BlindedToken {
 #[allow(non_snake_case)]
 pub struct PublicKey {
     /// `X` is a generator
-    X: CompressedRistretto,
+    pub(crate) X: CompressedRistretto,
     /// `Y` is the committment to a particular key
     ///
     /// \\(Y = X^k\\)
-    Y: CompressedRistretto,
+    pub(crate) Y: CompressedRistretto,
 }
 
 /// A `SigningKey` is used to sign a `BlindedToken` and verify an `UnblindedToken`.
@@ -238,7 +238,7 @@ pub struct SigningKey {
     /// `k` is the actual key
     pub(crate) k: Scalar,
     /// A `PublicKey` showing a committment to this particular key
-    public_key: PublicKey,
+    pub(crate) public_key: PublicKey,
 }
 
 /// Overwrite signing key with null when it goes out of scope.
@@ -292,7 +292,7 @@ impl SigningKey {
 /// \\(Q = P^k = (T^r)^k\\)
 #[repr(C)]
 #[derive(Debug)]
-pub struct SignedToken(CompressedRistretto);
+pub struct SignedToken(pub(crate) CompressedRistretto);
 
 /// An `UnblindedToken` is the result of unblinding a `SignedToken`.
 ///
