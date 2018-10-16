@@ -28,6 +28,10 @@ extern crate serde;
 #[cfg(test)]
 extern crate sha2;
 
+#[cfg(test)]
+#[macro_use]
+extern crate std;
+
 mod dleq;
 pub mod errors;
 mod vorpf;
