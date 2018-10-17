@@ -10,6 +10,8 @@ use core::fmt::Display;
 pub enum InternalError {
     /// An error occured when converting from a `CompressedRistretto` to a `RistrettoPoint`
     PointDecompressionError,
+    /// An error occured when interpretting bytes as a scalar
+    ScalarFormatError,
     /// An error in the length of bytes handed to a constructor.
     BytesLengthError {
         /// The name of the type
@@ -21,17 +23,23 @@ pub enum InternalError {
     VerifyError,
     /// Inputs differed in length
     LengthMismatchError,
+    /// Decoding failed
+    DecodingError,
 }
 
 impl Display for InternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             InternalError::PointDecompressionError => write!(f, "Cannot decompress Edwards point"),
+            InternalError::ScalarFormatError => {
+                write!(f, "Input bytes were not in canonical representation")
+            }
             InternalError::BytesLengthError { name: n, length: l } => {
                 write!(f, "{} must be {} bytes in length", n, l)
             }
             InternalError::VerifyError => write!(f, "Verification failed"),
             InternalError::LengthMismatchError => write!(f, "Inputs differed in length"),
+            InternalError::DecodingError => write!(f, "Decoding failed"),
         }
     }
 }
