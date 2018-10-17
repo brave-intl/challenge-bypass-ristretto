@@ -22,13 +22,16 @@ extern crate digest;
 extern crate hmac;
 extern crate rand;
 
+#[cfg(feature = "base64")]
+extern crate base64;
+
 #[cfg(feature = "serde")]
 extern crate serde;
 
 #[cfg(test)]
 extern crate sha2;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "base64"))]
 #[macro_use]
 extern crate std;
 

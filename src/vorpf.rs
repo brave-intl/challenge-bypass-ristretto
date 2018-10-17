@@ -1,5 +1,8 @@
 use core::fmt::Debug;
 
+#[cfg(feature = "base64")]
+use std::string::String;
+
 use clear_on_drop::clear::Clear;
 use crypto_mac::MacResult;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
@@ -12,6 +15,12 @@ use hmac::digest::{BlockInput, Input};
 use hmac::{Hmac, Mac};
 use rand::{CryptoRng, Rng};
 
+#[cfg(feature = "base64")]
+use base64;
+
+#[cfg(any(feature = "base64", feature = "serde"))]
+use hmac::digest::generic_array::GenericArray;
+
 #[cfg(feature = "serde")]
 use serde::de::Error as SerdeError;
 #[cfg(feature = "serde")]
@@ -23,8 +32,22 @@ use serde::{Deserializer, Serializer};
 
 use errors::{InternalError, TokenError};
 
+/// The length of a `TokenPreimage`, in bytes.
+pub const TOKEN_PREIMAGE_LENGTH: usize = 64;
+/// The length of a `Token`, in bytes.
+pub const TOKEN_LENGTH: usize = 96;
 /// The length of a `BlindedToken`, in bytes.
 pub const BLINDED_TOKEN_LENGTH: usize = 32;
+/// The length of a `PublicKey`, in bytes.
+pub const PUBLIC_KEY_LENGTH: usize = 64;
+/// The length of a `SIGNING_KEY_LENGTH`, in bytes.
+pub const SIGNING_KEY_LENGTH: usize = 96;
+/// The length of a `SIGNED_TOKEN_LENGTH`, in bytes.
+pub const SIGNED_TOKEN_LENGTH: usize = 32;
+/// The length of a `UNBLINDED_TOKEN_LENGTH`, in bytes.
+pub const UNBLINDED_TOKEN_LENGTH: usize = 96;
+/// The length of a `VERIFICATION_SIGNATURE_LENGTH`, in bytes.
+pub const VERIFICATION_SIGNATURE_LENGTH: usize = 64;
 
 #[cfg(test)]
 mod tests {
@@ -75,19 +98,80 @@ mod tests {
     }
 }
 
+#[cfg(feature = "base64")]
+macro_rules! impl_base64 {
+    ($t:ident) => {
+        impl $t {
+            /// Encode to a base64 string
+            pub fn encode_base64(&self) -> String {
+                base64::encode(&self.to_bytes()[..])
+            }
+
+            /// Decode from a base64 string
+            pub fn decode_base64(s: &str) -> Result<Self, TokenError> {
+                let bytes = base64::decode(s).or(Err(TokenError(InternalError::DecodingError)))?;
+                $t::from_bytes(&bytes)
+            }
+        }
+    };
+}
+
+#[cfg(feature = "serde")]
+macro_rules! impl_serde {
+    ($t:ident) => {
+        impl Serialize for $t {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                serializer.serialize_bytes(&self.to_bytes())
+            }
+        }
+
+        impl<'d> Deserialize<'d> for $t {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'d>,
+            {
+                struct TVisitor;
+
+                impl<'d> Visitor<'d> for TVisitor {
+                    type Value = $t;
+
+                    fn expecting(
+                        &self,
+                        formatter: &mut ::core::fmt::Formatter,
+                    ) -> ::core::fmt::Result {
+                        $t::bytes_length_error().fmt(formatter)
+                    }
+
+                    fn visit_bytes<E>(self, bytes: &[u8]) -> Result<$t, E>
+                    where
+                        E: SerdeError,
+                    {
+                        $t::from_bytes(bytes)
+                            .or(Err(SerdeError::invalid_length(bytes.len(), &self)))
+                    }
+                }
+                deserializer.deserialize_bytes(TVisitor)
+            }
+        }
+    };
+}
+
 /// A `TokenPreimage` is a slice of bytes which can be hashed to a `RistrettoPoint`.
 ///
 /// The hash function must ensure the discrete log with respect to other points is unknown.
 /// In this construction `RistrettoPoint::from_uniform_bytes` is used as the hash function.
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Copy, Clone)]
-pub struct TokenPreimage([u8; 64]);
-#[allow(non_snake_case)]
-impl TokenPreimage {
-    pub(crate) fn T(&self) -> RistrettoPoint {
-        RistrettoPoint::from_uniform_bytes(&self.0)
-    }
-}
+pub struct TokenPreimage([u8; TOKEN_PREIMAGE_LENGTH]);
+
+#[cfg(feature = "base64")]
+impl_base64!(TokenPreimage);
+
+#[cfg(feature = "serde")]
+impl_serde!(TokenPreimage);
 
 impl Debug for TokenPreimage {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
@@ -95,11 +179,41 @@ impl Debug for TokenPreimage {
     }
 }
 
+#[allow(non_snake_case)]
+impl TokenPreimage {
+    pub(crate) fn T(&self) -> RistrettoPoint {
+        RistrettoPoint::from_uniform_bytes(&self.0)
+    }
+
+    /// Convert this `TokenPreimage` to a byte array.
+    pub fn to_bytes(&self) -> [u8; TOKEN_PREIMAGE_LENGTH] {
+        self.0
+    }
+
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "TokenPreimage",
+            length: TOKEN_PREIMAGE_LENGTH,
+        })
+    }
+
+    /// Construct a `TokenPreimage` from a slice of bytes.
+    pub fn from_bytes(bytes: &[u8]) -> Result<TokenPreimage, TokenError> {
+        if bytes.len() != TOKEN_PREIMAGE_LENGTH {
+            return Err(TokenPreimage::bytes_length_error());
+        }
+
+        let mut bits: [u8; TOKEN_PREIMAGE_LENGTH] = [0u8; TOKEN_PREIMAGE_LENGTH];
+        bits.copy_from_slice(&bytes);
+        Ok(TokenPreimage(bits))
+    }
+}
+
 /// A `Token` consists of a randomly chosen preimage and blinding factor.
 ///
 /// Since a token includes the blinding factor it should be treated
 /// as a client secret and NEVER revealed to the server.
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Debug)]
 pub struct Token {
     /// `t` is a `TokenPreimage`
@@ -114,6 +228,12 @@ impl Drop for Token {
         self.r.clear();
     }
 }
+
+#[cfg(feature = "base64")]
+impl_base64!(Token);
+
+#[cfg(feature = "serde")]
+impl_serde!(Token);
 
 #[allow(non_snake_case)]
 impl Token {
@@ -146,6 +266,41 @@ impl Token {
                 .ok_or(TokenError(InternalError::PointDecompressionError))?).compress(),
         })
     }
+
+    /// Convert this `Token` to a byte array.
+    pub fn to_bytes(&self) -> [u8; TOKEN_LENGTH] {
+        let mut token_bytes: [u8; TOKEN_LENGTH] = [0u8; TOKEN_LENGTH];
+
+        token_bytes[..TOKEN_PREIMAGE_LENGTH].copy_from_slice(&self.t.to_bytes());
+        token_bytes[TOKEN_PREIMAGE_LENGTH..].copy_from_slice(&self.r.to_bytes());
+        token_bytes
+    }
+
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "Token",
+            length: TOKEN_LENGTH,
+        })
+    }
+
+    /// Construct a `Token` from a slice of bytes.
+    pub fn from_bytes(bytes: &[u8]) -> Result<Token, TokenError> {
+        if bytes.len() != TOKEN_LENGTH {
+            return Err(Token::bytes_length_error());
+        }
+
+        let preimage = TokenPreimage::from_bytes(&bytes[..TOKEN_PREIMAGE_LENGTH])?;
+
+        let mut blinding_factor_bits: [u8; 32] = [0u8; 32];
+        blinding_factor_bits.copy_from_slice(&bytes[TOKEN_PREIMAGE_LENGTH..]);
+        let blinding_factor = Scalar::from_canonical_bytes(blinding_factor_bits)
+            .ok_or(TokenError(InternalError::ScalarFormatError))?;
+
+        Ok(Token {
+            t: preimage,
+            r: blinding_factor,
+        })
+    }
 }
 
 /// A `BlindedToken` is sent to the server for signing.
@@ -154,9 +309,15 @@ impl Token {
 /// preimage with the blinding factor.
 ///
 /// \\(P = T^r = H_1(t)^r\\)
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Debug)]
 pub struct BlindedToken(pub(crate) CompressedRistretto);
+
+#[cfg(feature = "base64")]
+impl_base64!(BlindedToken);
+
+#[cfg(feature = "serde")]
+impl_serde!(BlindedToken);
 
 impl BlindedToken {
     /// Convert this `BlindedToken` to a byte array.
@@ -164,13 +325,17 @@ impl BlindedToken {
         self.0.to_bytes()
     }
 
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "BlindedToken",
+            length: BLINDED_TOKEN_LENGTH,
+        })
+    }
+
     /// Construct a `BlindedToken` from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<BlindedToken, TokenError> {
         if bytes.len() != BLINDED_TOKEN_LENGTH {
-            return Err(TokenError(InternalError::BytesLengthError {
-                name: "BlindedToken",
-                length: BLINDED_TOKEN_LENGTH,
-            }));
+            return Err(BlindedToken::bytes_length_error());
         }
 
         let mut bits: [u8; 32] = [0u8; 32];
@@ -179,45 +344,8 @@ impl BlindedToken {
     }
 }
 
-#[cfg(feature = "serde")]
-impl Serialize for BlindedToken {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_bytes(self.to_bytes())
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'d> Deserialize<'d> for BlindedToken {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'d>,
-    {
-        struct BlindedTokenVisitor;
-
-        impl<'d> Visitor<'d> for BlindedTokenVisitor {
-            type Value = BlindedToken;
-
-            fn expecting(&self, formatter: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                formatter.write_str("A blinded token must be 32 bytes.")
-            }
-
-            fn visit_bytes<E>(self, bytes: &[u8]) -> Result<BlindedToken, E>
-            where
-                E: SerdeError,
-            {
-                BlindedToken::from_bytes(bytes)
-                    .or(Err(SerdeError::invalid_length(bytes.len(), &self)))
-            }
-        }
-        deserializer.deserialize_bytes(BlindedTokenVisitor)
-    }
-}
-
 /// A `PublicKey` is a committment by the server to a particular `SigningKey`.
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct PublicKey {
@@ -229,17 +357,64 @@ pub struct PublicKey {
     pub(crate) Y: CompressedRistretto,
 }
 
+#[cfg(feature = "base64")]
+impl_base64!(PublicKey);
+
+#[cfg(feature = "serde")]
+impl_serde!(PublicKey);
+
+impl PublicKey {
+    /// Convert this `PublicKey` to a byte array.
+    pub fn to_bytes(&self) -> [u8; PUBLIC_KEY_LENGTH] {
+        let mut public_key_bytes: [u8; PUBLIC_KEY_LENGTH] = [0u8; PUBLIC_KEY_LENGTH];
+
+        public_key_bytes[..32].copy_from_slice(&self.X.to_bytes());
+        public_key_bytes[32..].copy_from_slice(&self.Y.to_bytes());
+        public_key_bytes
+    }
+
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "PublicKey",
+            length: PUBLIC_KEY_LENGTH,
+        })
+    }
+
+    /// Construct a `PublicKey` from a slice of bytes.
+    pub fn from_bytes(bytes: &[u8]) -> Result<PublicKey, TokenError> {
+        if bytes.len() != PUBLIC_KEY_LENGTH {
+            return Err(PublicKey::bytes_length_error());
+        }
+
+        let mut x_bits: [u8; 32] = [0u8; 32];
+        let mut y_bits: [u8; 32] = [0u8; 32];
+        x_bits.copy_from_slice(&bytes[..32]);
+        y_bits.copy_from_slice(&bytes[32..]);
+
+        Ok(PublicKey {
+            X: CompressedRistretto(x_bits),
+            Y: CompressedRistretto(y_bits),
+        })
+    }
+}
+
 /// A `SigningKey` is used to sign a `BlindedToken` and verify an `UnblindedToken`.
 ///
 /// This is a server secret and should NEVER be revealed to the client.
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Debug)]
 pub struct SigningKey {
-    /// `k` is the actual key
-    pub(crate) k: Scalar,
     /// A `PublicKey` showing a committment to this particular key
     pub(crate) public_key: PublicKey,
+    /// `k` is the actual key
+    pub(crate) k: Scalar,
 }
+
+#[cfg(feature = "base64")]
+impl_base64!(SigningKey);
+
+#[cfg(feature = "serde")]
+impl_serde!(SigningKey);
 
 /// Overwrite signing key with null when it goes out of scope.
 impl Drop for SigningKey {
@@ -285,20 +460,83 @@ impl SigningKey {
             W: (self.k * t.T()).compress(),
         }
     }
+
+    /// Convert this `SigningKey` to a byte array.
+    pub fn to_bytes(&self) -> [u8; SIGNING_KEY_LENGTH] {
+        let mut signing_key_bytes: [u8; SIGNING_KEY_LENGTH] = [0u8; SIGNING_KEY_LENGTH];
+
+        signing_key_bytes[..PUBLIC_KEY_LENGTH].copy_from_slice(&self.public_key.to_bytes());
+        signing_key_bytes[PUBLIC_KEY_LENGTH..].copy_from_slice(&self.k.to_bytes());
+        signing_key_bytes
+    }
+
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "SigningKey",
+            length: SIGNING_KEY_LENGTH,
+        })
+    }
+
+    /// Construct a `SigningKey` from a slice of bytes.
+    pub fn from_bytes(bytes: &[u8]) -> Result<SigningKey, TokenError> {
+        if bytes.len() != SIGNING_KEY_LENGTH {
+            return Err(SigningKey::bytes_length_error());
+        }
+
+        let public_key = PublicKey::from_bytes(&bytes[..PUBLIC_KEY_LENGTH])?;
+
+        let mut k_bits: [u8; 32] = [0u8; 32];
+        k_bits.copy_from_slice(&bytes[PUBLIC_KEY_LENGTH..]);
+        let k = Scalar::from_canonical_bytes(k_bits)
+            .ok_or(TokenError(InternalError::ScalarFormatError))?;
+
+        Ok(SigningKey { public_key, k })
+    }
 }
 
 /// A `SignedToken` is the result of signing an `BlindedToken`.
 ///
 /// \\(Q = P^k = (T^r)^k\\)
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Debug)]
 pub struct SignedToken(pub(crate) CompressedRistretto);
+
+#[cfg(feature = "base64")]
+impl_base64!(SignedToken);
+
+#[cfg(feature = "serde")]
+impl_serde!(SignedToken);
+
+impl SignedToken {
+    /// Convert this `SignedToken` to a byte array.
+    pub fn to_bytes(&self) -> [u8; SIGNED_TOKEN_LENGTH] {
+        self.0.to_bytes()
+    }
+
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "SignedToken",
+            length: SIGNED_TOKEN_LENGTH,
+        })
+    }
+
+    /// Construct a `SignedToken` from a slice of bytes.
+    pub fn from_bytes(bytes: &[u8]) -> Result<SignedToken, TokenError> {
+        if bytes.len() != SIGNED_TOKEN_LENGTH {
+            return Err(SignedToken::bytes_length_error());
+        }
+
+        let mut bits: [u8; 32] = [0u8; 32];
+        bits.copy_from_slice(&bytes[..32]);
+        Ok(SignedToken(CompressedRistretto(bits)))
+    }
+}
 
 /// An `UnblindedToken` is the result of unblinding a `SignedToken`.
 ///
 /// While both the client and server both "know" this value,
 /// it should nevertheless not be sent between the two.
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[allow(non_snake_case)]
 #[derive(Debug)]
 pub struct UnblindedToken {
@@ -309,6 +547,13 @@ pub struct UnblindedToken {
     /// \\(W = Q^(1/r) = (P^k)^(1/r) = ((T^r)^k)^(1/r) = ((T^k)^r)^(1/r) = T^k\\)
     W: CompressedRistretto,
 }
+
+#[cfg(feature = "base64")]
+impl_base64!(UnblindedToken);
+
+#[cfg(feature = "serde")]
+impl_serde!(UnblindedToken);
+
 impl UnblindedToken {
     /// Derive the `VerificationKey` for this particular `UnblindedToken`
     pub fn derive_verification_key<D>(&self) -> VerificationKey
@@ -327,12 +572,44 @@ impl UnblindedToken {
 
         VerificationKey(output_bytes)
     }
+
+    /// Convert this `UnblindedToken` to a byte array.
+    pub fn to_bytes(&self) -> [u8; UNBLINDED_TOKEN_LENGTH] {
+        let mut unblinded_token_bytes: [u8; UNBLINDED_TOKEN_LENGTH] = [0u8; UNBLINDED_TOKEN_LENGTH];
+
+        unblinded_token_bytes[..TOKEN_PREIMAGE_LENGTH].copy_from_slice(&self.t.to_bytes());
+        unblinded_token_bytes[TOKEN_PREIMAGE_LENGTH..].copy_from_slice(&self.W.to_bytes());
+        unblinded_token_bytes
+    }
+
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "UnblindedToken",
+            length: UNBLINDED_TOKEN_LENGTH,
+        })
+    }
+
+    /// Construct a `UnblindedToken` from a slice of bytes.
+    pub fn from_bytes(bytes: &[u8]) -> Result<UnblindedToken, TokenError> {
+        if bytes.len() != UNBLINDED_TOKEN_LENGTH {
+            return Err(UnblindedToken::bytes_length_error());
+        }
+
+        let preimage = TokenPreimage::from_bytes(&bytes[..TOKEN_PREIMAGE_LENGTH])?;
+
+        let mut w_bits: [u8; 32] = [0u8; 32];
+        w_bits.copy_from_slice(&bytes[TOKEN_PREIMAGE_LENGTH..]);
+        Ok(UnblindedToken {
+            t: preimage,
+            W: CompressedRistretto(w_bits),
+        })
+    }
 }
 
 /// The shared `VerificationKey` for proving / verifying the validity of an `UnblindedToken`.
 ///
 /// \\(K = H_2(t, W)\\)
-#[repr(C)]
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
 pub struct VerificationKey([u8; 64]);
 
 impl Debug for VerificationKey {
@@ -343,30 +620,68 @@ impl Debug for VerificationKey {
 
 impl VerificationKey {
     /// Use the `VerificationKey` to "sign" a message, producing a `VerificationSignature`
-    pub fn sign<D>(&self, message: &[u8]) -> VerificationSignature<D::OutputSize>
+    pub fn sign<D>(&self, message: &[u8]) -> VerificationSignature
     where
-        D: Input + BlockInput + FixedOutput + Default + Clone,
+        D: Digest<OutputSize = U64> + Input + BlockInput + FixedOutput + Default + Clone,
         D::BlockSize: ArrayLength<u8> + Clone,
-        D::OutputSize: ArrayLength<u8>,
     {
         let mut mac = Hmac::<D>::new_varkey(self.0.as_ref()).unwrap();
         mac.input(message);
 
         VerificationSignature(mac.result())
     }
+
+    /// Use the `VerificationKey` to check that the signature of a message matches the
+    /// provided `VerificationSignature`
+    pub fn verify<D>(&self, sig: &VerificationSignature, message: &[u8]) -> bool
+    where
+        D: Digest<OutputSize = U64> + Input + BlockInput + FixedOutput + Default + Clone,
+        D::BlockSize: ArrayLength<u8> + Clone,
+    {
+        &self.sign::<D>(message) == sig
+    }
 }
 
-/// A `VerificationSignature` which can be checked for equality between the client and server.
-#[repr(C)]
-pub struct VerificationSignature<N>(MacResult<N>)
-where
-    N: ArrayLength<u8>;
+/// A `VerificationSignature` which can be verified given the `VerificationKey` and message
+#[cfg_attr(not(feature = "cbindgen"), repr(C))]
+pub struct VerificationSignature(MacResult<U64>);
 
-impl<N> PartialEq for VerificationSignature<N>
-where
-    N: ArrayLength<u8>,
-{
-    fn eq(&self, other: &VerificationSignature<N>) -> bool {
+#[cfg(feature = "base64")]
+impl_base64!(VerificationSignature);
+
+#[cfg(feature = "serde")]
+impl_serde!(VerificationSignature);
+
+impl PartialEq for VerificationSignature {
+    fn eq(&self, other: &VerificationSignature) -> bool {
         self.0 == other.0
+    }
+}
+
+#[cfg(any(feature = "base64", feature = "serde"))]
+impl VerificationSignature {
+    /// Convert this `VerificationSignature` to a byte array.
+    /// We intentionally keep this private to avoid accidental non constant time comparisons
+    fn to_bytes(&self) -> [u8; VERIFICATION_SIGNATURE_LENGTH] {
+        let mut bytes: [u8; VERIFICATION_SIGNATURE_LENGTH] = [0u8; VERIFICATION_SIGNATURE_LENGTH];
+        bytes.copy_from_slice(self.0.clone().code().as_slice());
+        bytes
+    }
+
+    fn bytes_length_error() -> TokenError {
+        TokenError(InternalError::BytesLengthError {
+            name: "VerificationSignature",
+            length: VERIFICATION_SIGNATURE_LENGTH,
+        })
+    }
+
+    /// Construct a `VerificationSignature` from a slice of bytes.
+    fn from_bytes(bytes: &[u8]) -> Result<VerificationSignature, TokenError> {
+        if bytes.len() != VERIFICATION_SIGNATURE_LENGTH {
+            return Err(VerificationSignature::bytes_length_error());
+        }
+
+        let arr: &GenericArray<u8, U64> = GenericArray::from_slice(bytes);
+        Ok(VerificationSignature(MacResult::new(*arr)))
     }
 }
