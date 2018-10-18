@@ -187,8 +187,7 @@ impl Token {
             W: (self.r.invert() * Q
                 .0
                 .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?)
-            .compress(),
+                .ok_or(TokenError(InternalError::PointDecompressionError))?).compress(),
         })
     }
 
@@ -372,8 +371,7 @@ impl SigningKey {
             (self.k * P
                 .0
                 .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?)
-            .compress(),
+                .ok_or(TokenError(InternalError::PointDecompressionError))?).compress(),
         ))
     }
 
