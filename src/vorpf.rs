@@ -1,8 +1,5 @@
 use core::fmt::Debug;
 
-#[cfg(feature = "base64")]
-use std::string::String;
-
 use clear_on_drop::clear::Clear;
 use crypto_mac::MacResult;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
@@ -15,20 +12,8 @@ use hmac::digest::{BlockInput, Input};
 use hmac::{Hmac, Mac};
 use rand::{CryptoRng, Rng};
 
-#[cfg(feature = "base64")]
-use base64;
-
 #[cfg(any(feature = "base64", feature = "serde"))]
 use hmac::digest::generic_array::GenericArray;
-
-#[cfg(feature = "serde")]
-use serde::de::Error as SerdeError;
-#[cfg(feature = "serde")]
-use serde::de::Visitor;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
-use serde::{Deserializer, Serializer};
 
 use errors::{InternalError, TokenError};
 
@@ -96,67 +81,6 @@ mod tests {
         // The server compares the client signature to it's own
         assert!(client_sig == server_sig);
     }
-}
-
-#[cfg(feature = "base64")]
-macro_rules! impl_base64 {
-    ($t:ident) => {
-        impl $t {
-            /// Encode to a base64 string
-            pub fn encode_base64(&self) -> String {
-                base64::encode(&self.to_bytes()[..])
-            }
-
-            /// Decode from a base64 string
-            pub fn decode_base64(s: &str) -> Result<Self, TokenError> {
-                let bytes = base64::decode(s).or(Err(TokenError(InternalError::DecodingError)))?;
-                $t::from_bytes(&bytes)
-            }
-        }
-    };
-}
-
-#[cfg(feature = "serde")]
-macro_rules! impl_serde {
-    ($t:ident) => {
-        impl Serialize for $t {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: Serializer,
-            {
-                serializer.serialize_bytes(&self.to_bytes())
-            }
-        }
-
-        impl<'d> Deserialize<'d> for $t {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: Deserializer<'d>,
-            {
-                struct TVisitor;
-
-                impl<'d> Visitor<'d> for TVisitor {
-                    type Value = $t;
-
-                    fn expecting(
-                        &self,
-                        formatter: &mut ::core::fmt::Formatter,
-                    ) -> ::core::fmt::Result {
-                        $t::bytes_length_error().fmt(formatter)
-                    }
-
-                    fn visit_bytes<E>(self, bytes: &[u8]) -> Result<$t, E>
-                    where
-                        E: SerdeError,
-                    {
-                        $t::from_bytes(bytes)
-                            .or(Err(SerdeError::invalid_length(bytes.len(), &self)))
-                    }
-                }
-                deserializer.deserialize_bytes(TVisitor)
-            }
-        }
-    };
 }
 
 /// A `TokenPreimage` is a slice of bytes which can be hashed to a `RistrettoPoint`.
@@ -263,7 +187,8 @@ impl Token {
             W: (self.r.invert() * Q
                 .0
                 .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?).compress(),
+                .ok_or(TokenError(InternalError::PointDecompressionError))?)
+            .compress(),
         })
     }
 
@@ -447,7 +372,8 @@ impl SigningKey {
             (self.k * P
                 .0
                 .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?).compress(),
+                .ok_or(TokenError(InternalError::PointDecompressionError))?)
+            .compress(),
         ))
     }
 
