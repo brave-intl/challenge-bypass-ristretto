@@ -35,6 +35,9 @@ extern crate sha2;
 #[macro_use]
 extern crate std;
 
+#[macro_use]
+mod macros;
+
 mod dleq;
 pub mod errors;
 mod vorpf;
