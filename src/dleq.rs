@@ -8,7 +8,7 @@ use digest::Digest;
 use rand::{ChaChaRng, CryptoRng, Rng, SeedableRng};
 
 use errors::{InternalError, TokenError};
-use vorpf::{BlindedToken, PublicKey, SignedToken, SigningKey};
+use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
 
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 192;
@@ -17,7 +17,7 @@ pub const DLEQ_PROOF_LENGTH: usize = 192;
 mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
-    use vorpf::Token;
+    use voprf::Token;
 
     use super::*;
 

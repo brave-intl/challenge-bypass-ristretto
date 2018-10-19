@@ -40,8 +40,8 @@ mod macros;
 
 mod dleq;
 pub mod errors;
-mod vorpf;
+mod voprf;
 
 pub use self::dleq::*;
 pub use self::errors::*;
-pub use self::vorpf::*;
+pub use self::voprf::*;
