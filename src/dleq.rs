@@ -8,7 +8,7 @@ use digest::Digest;
 use rand::{ChaChaRng, CryptoRng, Rng, SeedableRng};
 
 use errors::{InternalError, TokenError};
-use vorpf::{BlindedToken, PublicKey, SignedToken, SigningKey};
+use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
 
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 192;
@@ -17,7 +17,7 @@ pub const DLEQ_PROOF_LENGTH: usize = 192;
 mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
-    use vorpf::Token;
+    use voprf::Token;
 
     use super::*;
 
@@ -292,12 +292,14 @@ impl BatchDLEQProof {
         let M = RistrettoPoint::optional_multiscalar_mul(
             iter::repeat_with(|| Scalar::random(&mut prng_M)).take(blinded_tokens.len()),
             blinded_tokens.iter().map(|Pi| Pi.0.decompress()),
-        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
+        )
+        .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         let Z = RistrettoPoint::optional_multiscalar_mul(
             iter::repeat_with(|| Scalar::random(&mut prng_Z)).take(blinded_tokens.len()),
             signed_tokens.iter().map(|Qi| Qi.0.decompress()),
-        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
+        )
+        .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         Ok((M, Z))
     }
