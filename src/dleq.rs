@@ -292,14 +292,12 @@ impl BatchDLEQProof {
         let M = RistrettoPoint::optional_multiscalar_mul(
             iter::repeat_with(|| Scalar::random(&mut prng_M)).take(blinded_tokens.len()),
             blinded_tokens.iter().map(|Pi| Pi.0.decompress()),
-        )
-        .ok_or(TokenError(InternalError::PointDecompressionError))?;
+        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         let Z = RistrettoPoint::optional_multiscalar_mul(
             iter::repeat_with(|| Scalar::random(&mut prng_Z)).take(blinded_tokens.len()),
             signed_tokens.iter().map(|Qi| Qi.0.decompress()),
-        )
-        .ok_or(TokenError(InternalError::PointDecompressionError))?;
+        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         Ok((M, Z))
     }
