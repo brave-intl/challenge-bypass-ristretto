@@ -25,6 +25,9 @@ extern crate rand;
 #[cfg(feature = "base64")]
 extern crate base64;
 
+#[cfg(feature = "merlin")]
+extern crate merlin;
+
 #[cfg(feature = "serde")]
 extern crate serde;
 
