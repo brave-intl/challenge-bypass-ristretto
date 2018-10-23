@@ -1,4 +1,5 @@
 #![no_std]
+#![cfg_attr(all(feature = "alloc", not(feature = "std")), feature(alloc))]
 #![deny(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", feature(tool_lints))]
 #![cfg_attr(
@@ -15,6 +16,15 @@
 //!
 //! We have tried to align notation with that used in the paper
 //! [Privacy Pass: Bypassing Internet Challenges Anonymously](https://www.petsymposium.org/2018/files/papers/issue3/popets-2018-0026.pdf)
+
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+extern crate alloc;
+
+//#[cfg(any(test, feature = "base64", feature = "std"))]
+#[cfg(any(test, feature = "std"))]
+#[macro_use]
+extern crate std;
+
 extern crate clear_on_drop;
 extern crate crypto_mac;
 extern crate curve25519_dalek;
@@ -33,10 +43,6 @@ extern crate serde;
 
 #[cfg(test)]
 extern crate sha2;
-
-#[cfg(any(test, feature = "base64"))]
-#[macro_use]
-extern crate std;
 
 #[macro_use]
 mod macros;

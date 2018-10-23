@@ -1,3 +1,9 @@
+#[cfg(all(feature = "alloc", not(feature = "std")))]
+use alloc::vec::Vec;
+
+#[cfg(all(feature = "std"))]
+use std::vec::Vec;
+
 use core::iter;
 
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -306,7 +312,9 @@ impl DLEQProof {
         let mut rng = transcript
             .build_rng()
             .commit_witness_bytes(b"k", secret_key.k.as_bytes())
-            .finalize(&mut rand::thread_rng());
+            .finalize(
+                &mut rand::rngs::OsRng::new().or(Err(TokenError(InternalError::VerifyError)))?,
+            );
         let t = Scalar::random(&mut rng);
 
         let A = t * X
@@ -447,16 +455,18 @@ impl BatchDLEQProof {
         let mut seed: [u8; 32] = [0u8; 32];
         seed.copy_from_slice(&result[..32]);
 
-        let mut prng_M: ChaChaRng = SeedableRng::from_seed(seed);
-        let mut prng_Z = prng_M.clone();
+        let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
+        let c_m: Vec<Scalar> = iter::repeat_with(|| Scalar::random(&mut prng))
+            .take(blinded_tokens.len())
+            .collect();
 
         let M = RistrettoPoint::optional_multiscalar_mul(
-            iter::repeat_with(|| Scalar::random(&mut prng_M)).take(blinded_tokens.len()),
+            &c_m,
             blinded_tokens.iter().map(|Pi| Pi.0.decompress()),
         ).ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         let Z = RistrettoPoint::optional_multiscalar_mul(
-            iter::repeat_with(|| Scalar::random(&mut prng_Z)).take(blinded_tokens.len()),
+            &c_m,
             signed_tokens.iter().map(|Qi| Qi.0.decompress()),
         ).ok_or(TokenError(InternalError::PointDecompressionError))?;
 
@@ -527,13 +537,17 @@ impl BatchDLEQProof {
 
         let mut transcript_Z = transcript.clone();
 
+        let c_m: Vec<Scalar> = iter::repeat_with(|| transcript.challenge_scalar(b"c_i"))
+            .take(blinded_tokens.len())
+            .collect();
+
         let M = RistrettoPoint::optional_multiscalar_mul(
-            iter::repeat_with(|| transcript.challenge_scalar(b"c_i")).take(blinded_tokens.len()),
+            &c_m,
             blinded_tokens.iter().map(|Pi| Pi.0.decompress()),
         ).ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         let Z = RistrettoPoint::optional_multiscalar_mul(
-            iter::repeat_with(|| transcript_Z.challenge_scalar(b"c_i")).take(blinded_tokens.len()),
+            &c_m,
             signed_tokens.iter().map(|Qi| Qi.0.decompress()),
         ).ok_or(TokenError(InternalError::PointDecompressionError))?;
 
