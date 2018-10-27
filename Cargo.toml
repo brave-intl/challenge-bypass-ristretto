@@ -26,7 +26,7 @@ version = "0.4.0"
 
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
-default = ["std", "u32_backend"]
+default = ["std", "u64_backend"]
 std = ["alloc", "curve25519-dalek/std"]
 alloc = ["curve25519-dalek/alloc"]
 u32_backend = ["curve25519-dalek/u32_backend"]

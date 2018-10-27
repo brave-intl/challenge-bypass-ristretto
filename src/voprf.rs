@@ -234,7 +234,7 @@ impl Token {
 ///
 /// \\(P = T^r = H_1(t)^r\\)
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct BlindedToken(pub(crate) CompressedRistretto);
 
 #[cfg(feature = "base64")]
@@ -270,7 +270,7 @@ impl BlindedToken {
 
 /// A `PublicKey` is a committment by the server to a particular `SigningKey`.
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 #[allow(non_snake_case)]
 pub struct PublicKey {
     /// `X` is a generator
@@ -329,7 +329,7 @@ impl PublicKey {
 #[derive(Debug)]
 pub struct SigningKey {
     /// A `PublicKey` showing a committment to this particular key
-    pub(crate) public_key: PublicKey,
+    pub public_key: PublicKey,
     /// `k` is the actual key
     pub(crate) k: Scalar,
 }
@@ -418,11 +418,11 @@ impl SigningKey {
     }
 }
 
-/// A `SignedToken` is the result of signing an `BlindedToken`.
+/// A `SignedToken` is the result of signing a `BlindedToken`.
 ///
 /// \\(Q = P^k = (T^r)^k\\)
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct SignedToken(pub(crate) CompressedRistretto);
 
 #[cfg(feature = "base64")]

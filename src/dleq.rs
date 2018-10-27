@@ -76,16 +76,16 @@ mod tests {
         let P = RistrettoPoint::random(&mut rng);
         let Q = key1.k * P;
 
-        let proof = DLEQProof::new::<Sha512, OsRng>(&mut rng, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new::<Sha512, OsRng>(&mut rng, P, Q, &key1).unwrap();
 
-        assert!(proof.verify::<Sha512>(P, Q, &key1.public_key).is_ok());
+        assert!(proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
 
         let P = RistrettoPoint::random(&mut rng);
         let Q = key2.k * P;
 
-        let proof = DLEQProof::new::<Sha512, OsRng>(&mut rng, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new::<Sha512, OsRng>(&mut rng, P, Q, &key1).unwrap();
 
-        assert!(!proof.verify::<Sha512>(P, Q, &key1.public_key).is_ok());
+        assert!(!proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
     }
 
     #[cfg(not(feature = "merlin"))]
@@ -128,21 +128,21 @@ mod tests {
         let Q = key1.k * P;
 
         let mut verifier = Transcript::new(b"dleqtest");
-        let proof = DLEQProof::new(&mut verifier, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new(&mut verifier, P, Q, &key1).unwrap();
 
         let mut verifier = Transcript::new(b"dleqtest");
-        assert!(proof.verify(&mut verifier, P, Q, &key1.public_key).is_ok());
+        assert!(proof._verify(&mut verifier, P, Q, &key1.public_key).is_ok());
 
         let P = RistrettoPoint::random(&mut rng);
         let Q = key2.k * P;
 
         let mut transcript = Transcript::new(b"dleqtest");
-        let proof = DLEQProof::new(&mut transcript, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new(&mut transcript, P, Q, &key1).unwrap();
 
         let mut transcript = Transcript::new(b"dleqtest");
         assert!(
             !proof
-                .verify(&mut transcript, P, Q, &key1.public_key)
+                ._verify(&mut transcript, P, Q, &key1.public_key)
                 .is_ok()
         );
     }
@@ -181,7 +181,6 @@ mod tests {
 }
 
 /// A `DLEQProof` is a proof of the equivalence of the discrete logarithm between two pairs of points.
-#[repr(C)]
 #[allow(non_snake_case)]
 pub struct DLEQProof {
     /// `c` is a `Scalar`
@@ -202,7 +201,7 @@ impl_serde!(DLEQProof);
 #[allow(non_snake_case)]
 impl DLEQProof {
     /// Construct a new `DLEQProof`
-    pub fn new<D, T>(
+    fn _new<D, T>(
         rng: &mut T,
         P: RistrettoPoint,
         Q: RistrettoPoint,
@@ -244,8 +243,33 @@ impl DLEQProof {
         Ok(DLEQProof { c, s })
     }
 
+    /// Construct a new `DLEQProof`
+    pub fn new<D, T>(
+        rng: &mut T,
+        blinded_token: &BlindedToken,
+        signed_token: &SignedToken,
+        k: &SigningKey,
+    ) -> Result<Self, TokenError>
+    where
+        D: Digest<OutputSize = U64> + Default,
+        T: Rng + CryptoRng,
+    {
+        return Self::_new::<D, T>(
+            rng,
+            blinded_token
+                .0
+                .decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?,
+            signed_token
+                .0
+                .decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?,
+            k,
+        );
+    }
+
     /// Verify the `DLEQProof`
-    pub fn verify<D>(
+    fn _verify<D>(
         &self,
         P: RistrettoPoint,
         Q: RistrettoPoint,
@@ -287,13 +311,36 @@ impl DLEQProof {
             Err(TokenError(InternalError::VerifyError))
         }
     }
+
+    /// Verify the `DLEQProof`
+    pub fn verify<D>(
+        &self,
+        blinded_token: &BlindedToken,
+        signed_token: &SignedToken,
+        public_key: &PublicKey,
+    ) -> Result<(), TokenError>
+    where
+        D: Digest<OutputSize = U64> + Default,
+    {
+        return self._verify::<D>(
+            blinded_token
+                .0
+                .decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?,
+            signed_token
+                .0
+                .decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?,
+            public_key,
+        );
+    }
 }
 
 #[cfg(feature = "merlin")]
 #[allow(non_snake_case)]
 impl DLEQProof {
     /// Construct a new `DLEQProof`
-    pub fn new(
+    fn _new(
         transcript: &mut Transcript,
         P: RistrettoPoint,
         Q: RistrettoPoint,
@@ -333,7 +380,7 @@ impl DLEQProof {
     }
 
     /// Verify the `DLEQProof`
-    pub fn verify(
+    fn _verify(
         &self,
         transcript: &mut Transcript,
         P: RistrettoPoint,
@@ -415,7 +462,6 @@ impl DLEQProof {
 
 /// A `BatchDLEQProof` is a proof of the equivalence of the discrete logarithm between a common
 /// pair of points and one or more other pairs of points.
-#[repr(C)]
 #[allow(non_snake_case)]
 pub struct BatchDLEQProof(DLEQProof);
 
@@ -489,7 +535,7 @@ impl BatchDLEQProof {
             signed_tokens,
             &signing_key.public_key,
         )?;
-        Ok(BatchDLEQProof(DLEQProof::new::<D, T>(
+        Ok(BatchDLEQProof(DLEQProof::_new::<D, T>(
             rng,
             M,
             Z,
@@ -510,7 +556,7 @@ impl BatchDLEQProof {
         let (M, Z) =
             BatchDLEQProof::calculate_composites::<D>(blinded_tokens, signed_tokens, public_key)?;
 
-        self.0.verify::<D>(M, Z, public_key)
+        self.0._verify::<D>(M, Z, public_key)
     }
 }
 
@@ -570,7 +616,7 @@ impl BatchDLEQProof {
             &signing_key.public_key,
         )?;
 
-        Ok(BatchDLEQProof(DLEQProof::new(
+        Ok(BatchDLEQProof(DLEQProof::_new(
             transcript,
             M,
             Z,
@@ -595,7 +641,7 @@ impl BatchDLEQProof {
             public_key,
         )?;
 
-        self.0.verify(transcript, M, Z, public_key)
+        self.0._verify(transcript, M, Z, public_key)
     }
 }
 
