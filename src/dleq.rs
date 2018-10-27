@@ -150,7 +150,7 @@ impl DLEQProof {
         D: Digest<OutputSize = U64> + Default,
         T: Rng + CryptoRng,
     {
-        return Self::_new::<D, T>(
+        Self::_new::<D, T>(
             rng,
             blinded_token
                 .0
@@ -161,7 +161,7 @@ impl DLEQProof {
                 .decompress()
                 .ok_or(TokenError(InternalError::PointDecompressionError))?,
             k,
-        );
+        )
     }
 
     /// Verify the `DLEQProof`
@@ -218,7 +218,7 @@ impl DLEQProof {
     where
         D: Digest<OutputSize = U64> + Default,
     {
-        return self._verify::<D>(
+        self._verify::<D>(
             blinded_token
                 .0
                 .decompress()
@@ -228,7 +228,7 @@ impl DLEQProof {
                 .decompress()
                 .ok_or(TokenError(InternalError::PointDecompressionError))?,
             public_key,
-        );
+        )
     }
 }
 
