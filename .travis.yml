@@ -2,17 +2,30 @@ language: rust
 
 matrix:
   include:
-    - rust: stable
+    - name: "stable rust + rustfmt"
+      rust: stable
       before_script:
         - rustup component add rustfmt-preview
       script:
         - cargo fmt -- --check
         - cargo build
         - cargo test
-    - rust: nightly
+    - name: "nightly rust + clippy"
+      rust: nightly
       before_script:
         - rustup component add clippy-preview
       script:
         - cargo clippy
         - cargo build
         - cargo test
+    - name: "nightly rust + no_std + alloc"
+      rust: nightly
+      script:
+        - cargo build --no-default-features --features alloc,u32_backend
+    - name: "nightly rust + merlin (experimental)"
+      rust: nightly
+      script:
+        - cargo build --features merlin
+        - cargo test --features merlin
+  allow_failures:
+    - name: "nightly rust + merlin (experimental)"
