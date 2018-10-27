@@ -25,6 +25,7 @@ matrix:
     - name: "nightly rust + merlin (experimental)"
       rust: nightly
       script:
-        - cargo build --no-default-features --features alloc,u32_backend
+        - cargo build --features merlin
+        - cargo test --features merlin
   allow_failures:
     - name: "nightly rust + merlin (experimental)"
