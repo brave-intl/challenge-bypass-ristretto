@@ -6,12 +6,12 @@ use std::vec::Vec;
 
 use core::iter;
 
+use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::VartimeMultiscalarMul;
-use digest::generic_array::typenum::U64;
-use digest::Digest;
-use rand::{ChaChaRng, CryptoRng, Rng, SeedableRng};
+use merlin::Transcript;
+use rand;
 
 use errors::{InternalError, TokenError};
 use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
@@ -19,10 +19,36 @@ use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 64;
 
+trait TranscriptProtocol {
+    fn dleq_domain_sep(&mut self);
+    fn batch_dleq_domain_sep(&mut self);
+    fn commit_point(&mut self, label: &'static [u8], point: &CompressedRistretto);
+    fn challenge_scalar(&mut self, label: &'static [u8]) -> Scalar;
+}
+
+impl TranscriptProtocol for Transcript {
+    fn dleq_domain_sep(&mut self) {
+        self.commit_bytes(b"dom-sep", b"dleq");
+    }
+
+    fn batch_dleq_domain_sep(&mut self) {
+        self.commit_bytes(b"dom-sep", b"batch-dleq");
+    }
+
+    fn commit_point(&mut self, label: &'static [u8], point: &CompressedRistretto) {
+        self.commit_bytes(label, point.as_bytes());
+    }
+
+    fn challenge_scalar(&mut self, label: &'static [u8]) -> Scalar {
+        let mut buf = [0; 64];
+        self.challenge_bytes(label, &mut buf);
+        Scalar::from_bytes_mod_order_wide(&buf)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::rngs::OsRng;
-    use sha2::Sha512;
     use voprf::Token;
 
     use super::*;
@@ -38,16 +64,24 @@ mod tests {
         let P = RistrettoPoint::random(&mut rng);
         let Q = key1.k * P;
 
-        let proof = DLEQProof::_new::<Sha512, OsRng>(&mut rng, P, Q, &key1).unwrap();
+        let mut verifier = Transcript::new(b"dleqtest");
+        let proof = DLEQProof::_new(&mut verifier, P, Q, &key1).unwrap();
 
-        assert!(proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
+        let mut verifier = Transcript::new(b"dleqtest");
+        assert!(proof._verify(&mut verifier, P, Q, &key1.public_key).is_ok());
 
         let P = RistrettoPoint::random(&mut rng);
         let Q = key2.k * P;
 
-        let proof = DLEQProof::_new::<Sha512, OsRng>(&mut rng, P, Q, &key1).unwrap();
+        let mut transcript = Transcript::new(b"dleqtest");
+        let proof = DLEQProof::_new(&mut transcript, P, Q, &key1).unwrap();
 
-        assert!(!proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
+        let mut transcript = Transcript::new(b"dleqtest");
+        assert!(
+            !proof
+                ._verify(&mut transcript, P, Q, &key1.public_key)
+                .is_ok()
+        );
     }
 
     #[test]
@@ -65,14 +99,19 @@ mod tests {
             .filter_map(|t| key.sign(t).ok())
             .collect();
 
+        let mut transcript = Transcript::new(b"batchdleqtest");
         let batch_proof =
-            BatchDLEQProof::new::<Sha512, OsRng>(&mut rng, &blinded_tokens, &signed_tokens, &key)
-                .unwrap();
+            BatchDLEQProof::new(&mut transcript, &blinded_tokens, &signed_tokens, &key).unwrap();
 
+        let mut transcript = Transcript::new(b"batchdleqtest");
         assert!(
             batch_proof
-                .verify::<Sha512>(&blinded_tokens, &signed_tokens, &key.public_key)
-                .is_ok()
+                .verify(
+                    &mut transcript,
+                    &blinded_tokens,
+                    &signed_tokens,
+                    &key.public_key
+                ).is_ok()
         );
     }
 }
@@ -97,85 +136,57 @@ impl_serde!(DLEQProof);
 #[allow(non_snake_case)]
 impl DLEQProof {
     /// Construct a new `DLEQProof`
-    fn _new<D, T>(
-        rng: &mut T,
+    fn _new(
+        transcript: &mut Transcript,
         P: RistrettoPoint,
         Q: RistrettoPoint,
-        k: &SigningKey,
-    ) -> Result<Self, TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
-    {
-        let t = Scalar::random(rng);
+        secret_key: &SigningKey,
+    ) -> Result<Self, TokenError> {
+        let X = secret_key.public_key.X;
+        let Y = secret_key.public_key.Y;
 
-        let A = t * k
-            .public_key
-            .X
+        transcript.dleq_domain_sep();
+
+        transcript.commit_point(b"X", &X);
+        transcript.commit_point(b"Y", &Y);
+        transcript.commit_point(b"P", &P.compress());
+        transcript.commit_point(b"Q", &Q.compress());
+
+        let mut rng = transcript
+            .build_rng()
+            .commit_witness_bytes(b"k", secret_key.k.as_bytes())
+            .finalize(
+                &mut rand::rngs::OsRng::new().or(Err(TokenError(InternalError::VerifyError)))?,
+            );
+        let t = Scalar::random(&mut rng);
+
+        let A = t * X
             .decompress()
             .ok_or(TokenError(InternalError::PointDecompressionError))?;
         let B = t * P;
 
-        let mut h = D::default();
+        transcript.commit_point(b"A", &A.compress());
+        transcript.commit_point(b"B", &B.compress());
 
-        let X = k.public_key.X;
-        let Y = k.public_key.Y;
-        let P = P.compress();
-        let Q = Q.compress();
-        let A = A.compress();
-        let B = B.compress();
+        let c = transcript.challenge_scalar(b"c");
 
-        h.input(X.as_bytes());
-        h.input(Y.as_bytes());
-        h.input(P.as_bytes());
-        h.input(Q.as_bytes());
-        h.input(A.as_bytes());
-        h.input(B.as_bytes());
-
-        let c = Scalar::from_hash(h);
-
-        let s = t - c * k.k;
+        let s = t - c * secret_key.k;
 
         Ok(DLEQProof { c, s })
     }
 
-    /// Construct a new `DLEQProof`
-    pub fn new<D, T>(
-        rng: &mut T,
-        blinded_token: &BlindedToken,
-        signed_token: &SignedToken,
-        k: &SigningKey,
-    ) -> Result<Self, TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
-    {
-        return Self::_new::<D, T>(
-            rng,
-            blinded_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            signed_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            k,
-        );
-    }
-
     /// Verify the `DLEQProof`
-    fn _verify<D>(
+    fn _verify(
         &self,
+        transcript: &mut Transcript,
         P: RistrettoPoint,
         Q: RistrettoPoint,
         public_key: &PublicKey,
-    ) -> Result<(), TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-    {
+    ) -> Result<(), TokenError> {
         let X = public_key.X;
         let Y = public_key.Y;
+
+        transcript.dleq_domain_sep();
 
         let A = (self.s * X
             .decompress()
@@ -185,50 +196,25 @@ impl DLEQProof {
                 .ok_or(TokenError(InternalError::PointDecompressionError))?);
         let B = (self.s * P) + (self.c * Q);
 
-        let A = A.compress();
-        let B = B.compress();
         let P = P.compress();
         let Q = Q.compress();
+        let A = A.compress();
+        let B = B.compress();
 
-        let mut h = D::default();
+        transcript.commit_point(b"X", &X);
+        transcript.commit_point(b"Y", &Y);
+        transcript.commit_point(b"P", &P);
+        transcript.commit_point(b"Q", &Q);
+        transcript.commit_point(b"A", &A);
+        transcript.commit_point(b"B", &B);
 
-        h.input(X.as_bytes());
-        h.input(Y.as_bytes());
-        h.input(P.as_bytes());
-        h.input(Q.as_bytes());
-        h.input(A.as_bytes());
-        h.input(B.as_bytes());
-
-        let c = Scalar::from_hash(h);
+        let c = transcript.challenge_scalar(b"c");
 
         if c == self.c {
             Ok(())
         } else {
             Err(TokenError(InternalError::VerifyError))
         }
-    }
-
-    /// Verify the `DLEQProof`
-    pub fn verify<D>(
-        &self,
-        blinded_token: &BlindedToken,
-        signed_token: &SignedToken,
-        public_key: &PublicKey,
-    ) -> Result<(), TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-    {
-        return self._verify::<D>(
-            blinded_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            signed_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            public_key,
-        );
     }
 }
 
@@ -283,35 +269,25 @@ impl_serde!(BatchDLEQProof);
 
 #[allow(non_snake_case)]
 impl BatchDLEQProof {
-    fn calculate_composites<D>(
+    fn calculate_composites(
+        transcript: &mut Transcript,
         blinded_tokens: &[BlindedToken],
         signed_tokens: &[SignedToken],
         public_key: &PublicKey,
-    ) -> Result<(RistrettoPoint, RistrettoPoint), TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-    {
+    ) -> Result<(RistrettoPoint, RistrettoPoint), TokenError> {
         if blinded_tokens.len() != signed_tokens.len() {
             return Err(TokenError(InternalError::LengthMismatchError));
         }
 
-        let mut h = D::default();
-
-        h.input(public_key.X.as_bytes());
-        h.input(public_key.Y.as_bytes());
+        transcript.commit_point(b"X", &public_key.X);
+        transcript.commit_point(b"Y", &public_key.Y);
 
         for (Pi, Qi) in blinded_tokens.iter().zip(signed_tokens.iter()) {
-            h.input(Pi.0.as_bytes());
-            h.input(Qi.0.as_bytes());
+            transcript.commit_point(b"Pi", &Pi.0);
+            transcript.commit_point(b"Qi", &Qi.0);
         }
 
-        let result = h.result();
-
-        let mut seed: [u8; 32] = [0u8; 32];
-        seed.copy_from_slice(&result[..32]);
-
-        let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
-        let c_m: Vec<Scalar> = iter::repeat_with(|| Scalar::random(&mut prng))
+        let c_m: Vec<Scalar> = iter::repeat_with(|| transcript.challenge_scalar(b"c_i"))
             .take(blinded_tokens.len())
             .collect();
 
@@ -329,23 +305,23 @@ impl BatchDLEQProof {
     }
 
     /// Construct a new `BatchDLEQProof`
-    pub fn new<D, T>(
-        rng: &mut T,
+    pub fn new(
+        transcript: &mut Transcript,
         blinded_tokens: &[BlindedToken],
         signed_tokens: &[SignedToken],
         signing_key: &SigningKey,
-    ) -> Result<Self, TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
-    {
-        let (M, Z) = BatchDLEQProof::calculate_composites::<D>(
+    ) -> Result<Self, TokenError> {
+        transcript.dleq_domain_sep();
+
+        let (M, Z) = BatchDLEQProof::calculate_composites(
+            transcript,
             blinded_tokens,
             signed_tokens,
             &signing_key.public_key,
         )?;
-        Ok(BatchDLEQProof(DLEQProof::_new::<D, T>(
-            rng,
+
+        Ok(BatchDLEQProof(DLEQProof::_new(
+            transcript,
             M,
             Z,
             signing_key,
@@ -353,19 +329,23 @@ impl BatchDLEQProof {
     }
 
     /// Verify a `BatchDLEQProof`
-    pub fn verify<D>(
+    pub fn verify(
         &self,
+        transcript: &mut Transcript,
         blinded_tokens: &[BlindedToken],
         signed_tokens: &[SignedToken],
         public_key: &PublicKey,
-    ) -> Result<(), TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-    {
-        let (M, Z) =
-            BatchDLEQProof::calculate_composites::<D>(blinded_tokens, signed_tokens, public_key)?;
+    ) -> Result<(), TokenError> {
+        transcript.dleq_domain_sep();
 
-        self.0._verify::<D>(M, Z, public_key)
+        let (M, Z) = BatchDLEQProof::calculate_composites(
+            transcript,
+            blinded_tokens,
+            signed_tokens,
+            public_key,
+        )?;
+
+        self.0._verify(transcript, M, Z, public_key)
     }
 }
 

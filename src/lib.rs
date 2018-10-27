@@ -47,10 +47,18 @@ extern crate sha2;
 #[macro_use]
 mod macros;
 
+#[cfg(not(feature = "merlin"))]
 mod dleq;
+#[cfg(feature = "merlin")]
+mod dleq_merlin;
+
 pub mod errors;
 mod voprf;
 
+#[cfg(not(feature = "merlin"))]
 pub use self::dleq::*;
+#[cfg(feature = "merlin")]
+pub use self::dleq_merlin::*;
+
 pub use self::errors::*;
 pub use self::voprf::*;
