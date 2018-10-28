@@ -3,6 +3,7 @@
 
 use core::fmt;
 use core::fmt::Display;
+use failure::Fail;
 
 /// Internal errors.  Most application-level developers will likely not
 /// need to pay any attention to these.
@@ -44,12 +45,20 @@ impl Display for InternalError {
     }
 }
 
+impl Fail for InternalError {}
+
 /// Errors when keys and/or tokens to or from wire formats, or verifying proofs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct TokenError(pub(crate) InternalError);
+pub struct TokenError(pub InternalError);
 
 impl Display for TokenError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl Fail for TokenError {
+    fn cause(&self) -> Option<&Fail> {
+        Some(&self.0)
     }
 }

@@ -29,6 +29,7 @@ extern crate clear_on_drop;
 extern crate crypto_mac;
 extern crate curve25519_dalek;
 extern crate digest;
+extern crate failure;
 extern crate hmac;
 extern crate rand;
 
