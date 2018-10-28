@@ -3,7 +3,9 @@
 
 use core::fmt;
 use core::fmt::Display;
-use failure::Fail;
+
+#[cfg(feature = "std")]
+use std::error::Error;
 
 /// Internal errors.  Most application-level developers will likely not
 /// need to pay any attention to these.
@@ -45,11 +47,12 @@ impl Display for InternalError {
     }
 }
 
-impl Fail for InternalError {}
+#[cfg(feature = "std")]
+impl Error for InternalError {}
 
 /// Errors when keys and/or tokens to or from wire formats, or verifying proofs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct TokenError(pub InternalError);
+pub struct TokenError(pub(crate) InternalError);
 
 impl Display for TokenError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -57,8 +60,9 @@ impl Display for TokenError {
     }
 }
 
-impl Fail for TokenError {
-    fn cause(&self) -> Option<&Fail> {
-        Some(&self.0)
+#[cfg(feature = "std")]
+impl Error for TokenError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        return Some(&self.0);
     }
 }
