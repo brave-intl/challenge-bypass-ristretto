@@ -6,10 +6,7 @@ use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
-use hmac::digest::generic_array::ArrayLength;
-pub use hmac::digest::FixedOutput;
-use hmac::digest::{BlockInput, Input};
-use hmac::{Hmac, Mac};
+use hmac::Mac;
 use rand::{CryptoRng, Rng};
 
 #[cfg(any(feature = "base64", feature = "serde"))]
@@ -36,10 +33,13 @@ pub const VERIFICATION_SIGNATURE_LENGTH: usize = 64;
 
 #[cfg(test)]
 mod tests {
+    use hmac::Hmac;
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
     use super::*;
+
+    type HmacSha512 = Hmac<Sha512>;
 
     #[test]
     fn it_works() {
@@ -67,7 +67,7 @@ mod tests {
         // client derives the shared key from the unblinded token
         let client_verification_key = unblinded_token.derive_verification_key::<Sha512>();
         // client signs a message using the shared key
-        let client_sig = client_verification_key.sign::<Sha512>(b"test message");
+        let client_sig = client_verification_key.sign::<HmacSha512>(b"test message");
 
         // client sends the token preimage, signature and message to the server
 
@@ -76,7 +76,7 @@ mod tests {
         // server derives the shared key from the unblinded token
         let server_verification_key = server_unblinded_token.derive_verification_key::<Sha512>();
         // server signs the same message using the shared key
-        let server_sig = server_verification_key.sign::<Sha512>(b"test message");
+        let server_sig = server_verification_key.sign::<HmacSha512>(b"test message");
 
         // The server compares the client signature to it's own
         assert!(client_sig == server_sig);
@@ -546,10 +546,9 @@ impl VerificationKey {
     /// Use the `VerificationKey` to "sign" a message, producing a `VerificationSignature`
     pub fn sign<D>(&self, message: &[u8]) -> VerificationSignature
     where
-        D: Digest<OutputSize = U64> + Input + BlockInput + FixedOutput + Default + Clone,
-        D::BlockSize: ArrayLength<u8> + Clone,
+        D: Mac<OutputSize = U64>,
     {
-        let mut mac = Hmac::<D>::new_varkey(self.0.as_ref()).unwrap();
+        let mut mac = D::new_varkey(self.0.as_ref()).unwrap();
         mac.input(message);
 
         VerificationSignature(mac.result())
@@ -559,8 +558,7 @@ impl VerificationKey {
     /// provided `VerificationSignature`
     pub fn verify<D>(&self, sig: &VerificationSignature, message: &[u8]) -> bool
     where
-        D: Digest<OutputSize = U64> + Input + BlockInput + FixedOutput + Default + Clone,
-        D::BlockSize: ArrayLength<u8> + Clone,
+        D: Mac<OutputSize = U64>,
     {
         &self.sign::<D>(message) == sig
     }
