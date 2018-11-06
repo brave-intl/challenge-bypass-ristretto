@@ -5,11 +5,11 @@ version = "0.1.0"
 
 [dependencies]
 clear_on_drop = "0.2.3"
-crypto-mac = "^0.6.0"
-curve25519-dalek = { version = "0.21.0", default-features = false }
-digest = "^0.7.0"
-hmac = "^0.6.0"
-rand = { version = "0.5.5", default-features = false }
+crypto-mac = "0.7"
+curve25519-dalek = { version = "1.0.0-pre", default-features = false }
+digest = "0.8"
+hmac = "0.7"
+rand = { version = "0.5", default-features = false }
 
 [dependencies.base64]
 optional = true
@@ -22,7 +22,7 @@ default-features = false
 
 [dependencies.merlin]
 optional = true
-version = "0.4.0"
+version = "1.0.0-pre"
 
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
@@ -34,7 +34,7 @@ u64_backend = ["curve25519-dalek/u64_backend"]
 avx2_backend = ["curve25519-dalek/avx2_backend"]
 
 [dev-dependencies]
-sha2 = "^0.7"
+sha2 = "0.8"
 [metadata.docs.rs]
 rustdoc-args = [
     "--html-in-header",
