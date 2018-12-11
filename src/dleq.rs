@@ -69,11 +69,9 @@ mod tests {
             BatchDLEQProof::new::<Sha512, OsRng>(&mut rng, &blinded_tokens, &signed_tokens, &key)
                 .unwrap();
 
-        assert!(
-            batch_proof
-                .verify::<Sha512>(&blinded_tokens, &signed_tokens, &key.public_key)
-                .is_ok()
-        );
+        assert!(batch_proof
+            .verify::<Sha512>(&blinded_tokens, &signed_tokens, &key.public_key)
+            .is_ok());
     }
 }
 
@@ -177,12 +175,12 @@ impl DLEQProof {
         let X = public_key.X;
         let Y = public_key.Y;
 
-        let A = (self.s * X
-            .decompress()
-            .ok_or(TokenError(InternalError::PointDecompressionError))?)
-            + (self.c * Y
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?);
+        let A = (self.s
+            * X.decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?)
+            + (self.c
+                * Y.decompress()
+                    .ok_or(TokenError(InternalError::PointDecompressionError))?);
         let B = (self.s * P) + (self.c * Q);
 
         let A = A.compress();
@@ -318,12 +316,14 @@ impl BatchDLEQProof {
         let M = RistrettoPoint::optional_multiscalar_mul(
             &c_m,
             blinded_tokens.iter().map(|Pi| Pi.0.decompress()),
-        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
+        )
+        .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         let Z = RistrettoPoint::optional_multiscalar_mul(
             &c_m,
             signed_tokens.iter().map(|Qi| Qi.0.decompress()),
-        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
+        )
+        .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         Ok((M, Z))
     }

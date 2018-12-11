@@ -2,10 +2,7 @@
 #![cfg_attr(all(feature = "alloc", not(feature = "std")), feature(alloc))]
 #![deny(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", feature(tool_lints))]
-#![cfg_attr(
-    feature = "cargo-clippy",
-    allow(clippy::many_single_char_names)
-)]
+#![cfg_attr(feature = "cargo-clippy", allow(clippy::many_single_char_names))]
 
 //! Challenge Bypass using the Ristretto group
 //!
