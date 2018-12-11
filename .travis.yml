@@ -1,5 +1,7 @@
 language: rust
-
+branches:
+  only:
+  - master
 matrix:
   include:
     - name: "stable rust + rustfmt"
