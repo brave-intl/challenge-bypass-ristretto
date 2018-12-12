@@ -28,6 +28,7 @@ extern crate curve25519_dalek;
 extern crate digest;
 extern crate hmac;
 extern crate rand;
+extern crate rand_chacha;
 
 #[cfg(feature = "base64")]
 extern crate base64;

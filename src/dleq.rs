@@ -11,7 +11,8 @@ use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::VartimeMultiscalarMul;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
-use rand::{ChaChaRng, CryptoRng, Rng, SeedableRng};
+use rand::{CryptoRng, Rng, SeedableRng};
+use rand_chacha::ChaChaRng;
 
 use errors::{InternalError, TokenError};
 use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
