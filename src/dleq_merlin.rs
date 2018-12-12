@@ -77,11 +77,9 @@ mod tests {
         let proof = DLEQProof::_new(&mut transcript, P, Q, &key1).unwrap();
 
         let mut transcript = Transcript::new(b"dleqtest");
-        assert!(
-            !proof
-                ._verify(&mut transcript, P, Q, &key1.public_key)
-                .is_ok()
-        );
+        assert!(!proof
+            ._verify(&mut transcript, P, Q, &key1.public_key)
+            .is_ok());
     }
 
     #[test]
@@ -104,15 +102,14 @@ mod tests {
             BatchDLEQProof::new(&mut transcript, &blinded_tokens, &signed_tokens, &key).unwrap();
 
         let mut transcript = Transcript::new(b"batchdleqtest");
-        assert!(
-            batch_proof
-                .verify(
-                    &mut transcript,
-                    &blinded_tokens,
-                    &signed_tokens,
-                    &key.public_key
-                ).is_ok()
-        );
+        assert!(batch_proof
+            .verify(
+                &mut transcript,
+                &blinded_tokens,
+                &signed_tokens,
+                &key.public_key
+            )
+            .is_ok());
     }
 }
 
@@ -188,12 +185,12 @@ impl DLEQProof {
 
         transcript.dleq_domain_sep();
 
-        let A = (self.s * X
-            .decompress()
-            .ok_or(TokenError(InternalError::PointDecompressionError))?)
-            + (self.c * Y
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?);
+        let A = (self.s
+            * X.decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?)
+            + (self.c
+                * Y.decompress()
+                    .ok_or(TokenError(InternalError::PointDecompressionError))?);
         let B = (self.s * P) + (self.c * Q);
 
         let P = P.compress();
@@ -294,12 +291,14 @@ impl BatchDLEQProof {
         let M = RistrettoPoint::optional_multiscalar_mul(
             &c_m,
             blinded_tokens.iter().map(|Pi| Pi.0.decompress()),
-        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
+        )
+        .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         let Z = RistrettoPoint::optional_multiscalar_mul(
             &c_m,
             signed_tokens.iter().map(|Qi| Qi.0.decompress()),
-        ).ok_or(TokenError(InternalError::PointDecompressionError))?;
+        )
+        .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
         Ok((M, Z))
     }

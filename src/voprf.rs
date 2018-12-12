@@ -184,10 +184,11 @@ impl Token {
     pub fn unblind(&self, Q: &SignedToken) -> Result<UnblindedToken, TokenError> {
         Ok(UnblindedToken {
             t: self.t,
-            W: (self.r.invert() * Q
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?).compress(),
+            W: (self.r.invert()
+                * Q.0
+                    .decompress()
+                    .ok_or(TokenError(InternalError::PointDecompressionError))?)
+            .compress(),
         })
     }
 
@@ -368,10 +369,11 @@ impl SigningKey {
     /// Returns None if the `BlindedToken` point is not valid.
     pub fn sign(&self, P: &BlindedToken) -> Result<SignedToken, TokenError> {
         Ok(SignedToken(
-            (self.k * P
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?).compress(),
+            (self.k
+                * P.0
+                    .decompress()
+                    .ok_or(TokenError(InternalError::PointDecompressionError))?)
+            .compress(),
         ))
     }
 
