@@ -172,6 +172,32 @@ impl Token {
         }
     }
 
+    /// Creates a new `Token`, using hashing to derive a `TokenPreimage` and the specified blind
+    pub(crate) fn hash_from_bytes_with_blind<D>(bytes: &[u8], blinding_scalar: Scalar) -> Self
+    where
+        D: Digest<OutputSize = U64> + Default,
+    {
+        let mut hash = D::default();
+        let mut seed = [0u8; 64];
+        hash.input(bytes);
+        seed.copy_from_slice(&hash.result().as_slice());
+
+        Token {
+            t: TokenPreimage(seed),
+            r: blinding_scalar,
+        }
+    }
+
+    /// Creates a new `Token`, using hashing to derive a `TokenPreimage` and a random blind
+    pub fn hash_from_bytes<D, T>(rng: &mut T, bytes: &[u8]) -> Self
+    where
+        D: Digest<OutputSize = U64> + Default,
+        T: Rng + CryptoRng,
+    {
+        let blinding_scalar = Scalar::random(rng);
+        Self::hash_from_bytes_with_blind::<D>(bytes, blinding_scalar)
+    }
+
     /// Blinds the `Token`, returning a `BlindedToken` to be sent to the server.
     pub fn blind(&self) -> BlindedToken {
         BlindedToken((self.r * self.t.T()).compress())
@@ -275,6 +301,7 @@ impl BlindedToken {
 #[allow(non_snake_case)]
 pub struct PublicKey {
     /// `X` is a generator
+    // FIXME use the Ristretto basepoint?
     pub(crate) X: CompressedRistretto,
     /// `Y` is the committment to a particular key
     ///
@@ -470,7 +497,7 @@ pub struct UnblindedToken {
     pub t: TokenPreimage,
     /// `W` is the unblinded signed `CompressedRistretto` point
     ///
-    /// \\(W = Q^(1/r) = (P^k)^(1/r) = ((T^r)^k)^(1/r) = ((T^k)^r)^(1/r) = T^k\\)
+    /// \\(W = Q^{1/r} = P^{k(1/r)} = T^{rk(1/r)} = T^k\\)
     W: CompressedRistretto,
 }
 

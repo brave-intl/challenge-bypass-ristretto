@@ -34,7 +34,9 @@ This method of token creation is generally useful as it allows for
 authorization in a way that is unlinkable. This library is intended for
 use in applications where these combined properties may be useful.
 
-# Short Protocol Description
+---
+
+A short description of the protocol follows, [a more detailed writeup is also available].
 
 The blinded token protocol has two parties and two stages. A client and
 issuer first perform the signing stage, after which the client is
@@ -71,11 +73,11 @@ By default this crate uses `std` and the `u64_backend` of [curve25519-dalek](htt
 The optional features include `base64` and `serde`.
 
 * `base64` exposes methods for base64 encoding / decoding of the various structures.
-* `serde` implements the [serde] `Serialize` / `Deserialize` traits.
+* `serde` implements the [serde](https://serde.rs) `Serialize` / `Deserialize` traits.
 
-`merlin` is an experimental feature that uses [merlin] to implement the DLEQ proofs. This diverges from
+`merlin` is an experimental feature that uses [merlin](https://github.com/dalek-cryptography/merlin) to implement the DLEQ proofs. This diverges from
 the original protocol specified in the privacy pass paper. It is not yet stable / intended for use and
-is implemented in `./src/dleq_merlin.rs`.
+is implemented in [`src/dleq_merlin.rs`].
 
 # Development
 
@@ -88,3 +90,6 @@ Run `cargo build`
 ## Testing
 
 Run `cargo test`
+
+[`src/dleq_merlin.rs`]: src/dleq_merlin.rs
+[a more detailed writeup is also available]: FIXME
