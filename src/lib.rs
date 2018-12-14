@@ -3,16 +3,12 @@
 #![deny(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", feature(tool_lints))]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::many_single_char_names))]
-
-//! Challenge Bypass using the Ristretto group
-//!
-//! Challenge Bypass can be thought of as a 'blind signature scheme' based on the concept
-//! of a Verifiable, Oblivious Pseudorandom Function (VOPRF).
-//!
-//! # Notation
-//!
-//! We have tried to align notation with that used in the paper
-//! [Privacy Pass: Bypassing Internet Challenges Anonymously](https://www.petsymposium.org/2018/files/papers/issue3/popets-2018-0026.pdf)
+#![cfg_attr(feature = "nightly", feature(external_doc))]
+//! [`src/dleq_merlin.rs`]: javascript:void(0)
+//! [a more detailed writeup is also available]: #cryptographic-protocol
+//! [`T`]: struct.TokenPreimage.html#method.T
+#![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
+#![cfg_attr(feature = "nightly", doc(include = "../docs/PROTOCOL.md"))]
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 extern crate alloc;

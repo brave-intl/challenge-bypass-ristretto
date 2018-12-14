@@ -1,4 +1,4 @@
-# challenge-bypass-ristretto [![Build Status](https://travis-ci.org/evq/challenge-bypass-ristretto.svg?branch=master)](https://travis-ci.org/evq/challenge-bypass-ristretto)
+# challenge-bypass-ristretto [![Build Status](https://travis-ci.org/brave-intl/challenge-bypass-ristretto.svg?branch=master)](https://travis-ci.org/brave-intl/challenge-bypass-ristretto)
 
 **A rust implemention of the
 [privacy pass cryptographic protocol](https://www.petsymposium.org/2018/files/papers/issue3/popets-2018-0026.pdf)
@@ -9,6 +9,8 @@ which is a pure-Rust implementation of group operations on Ristretto.
 
 It is only an implementation of the cryptographic protocol,
 it does not provide a service or FFI for use by other languages.
+
+**This crate is still a work in progress and is not yet recommended for external use.**
 
 # FFI
 
@@ -34,7 +36,9 @@ This method of token creation is generally useful as it allows for
 authorization in a way that is unlinkable. This library is intended for
 use in applications where these combined properties may be useful.
 
-# Short Protocol Description
+---
+
+A short description of the protocol follows, [a more detailed writeup is also available].
 
 The blinded token protocol has two parties and two stages. A client and
 issuer first perform the signing stage, after which the client is
@@ -55,14 +59,7 @@ server marks the token as spent so it cannot be used again.
 
 # Use
 
-This crate has not yet been released, currently you can add it as a dependency 
-from this github repository.
-
-`Cargo.toml`
-```
-[dependencies.challenge-bypass-ristretto]
-git = "https://github.com/evq/challenge-bypass-ristretto"
-```
+This crate is still a work in progress and is not yet recommended for external use.
 
 ## Features
 
@@ -71,11 +68,11 @@ By default this crate uses `std` and the `u64_backend` of [curve25519-dalek](htt
 The optional features include `base64` and `serde`.
 
 * `base64` exposes methods for base64 encoding / decoding of the various structures.
-* `serde` implements the [serde] `Serialize` / `Deserialize` traits.
+* `serde` implements the [serde](https://serde.rs) `Serialize` / `Deserialize` traits.
 
-`merlin` is an experimental feature that uses [merlin] to implement the DLEQ proofs. This diverges from
+`merlin` is an experimental feature that uses [merlin](https://github.com/dalek-cryptography/merlin) to implement the DLEQ proofs. This diverges from
 the original protocol specified in the privacy pass paper. It is not yet stable / intended for use and
-is implemented in `./src/dleq_merlin.rs`.
+is implemented in [`src/dleq_merlin.rs`].
 
 # Development
 
@@ -88,3 +85,6 @@ Run `cargo build`
 ## Testing
 
 Run `cargo test`
+
+[`src/dleq_merlin.rs`]: src/dleq_merlin.rs
+[a more detailed writeup is also available]: docs/PROTOCOL.md
