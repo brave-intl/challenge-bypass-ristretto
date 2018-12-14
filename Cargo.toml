@@ -1,7 +1,17 @@
 [package]
 authors = ["eV <ev@7pr.xyz>"]
 name = "challenge-bypass-ristretto"
-version = "0.1.0"
+version = "0.1.0-pre.1"
+readme = "README.md"
+license = ""
+repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
+documentation = "https://docs.rs/challenge-bypass-ristretto"
+description = "A rust implemention of the privacy pass cryptographic protocol using the Ristretto group (WIP)"
+
+exclude = [
+    ".gitignore",
+    ".travis.yml",
+]
 
 [dependencies]
 clear_on_drop = "0.2.3"
@@ -25,6 +35,9 @@ default-features = false
 optional = true
 version = "1"
 
+[dev-dependencies]
+sha2 = "0.8"
+
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
 default = ["std", "u64_backend"]
@@ -34,9 +47,8 @@ u32_backend = ["curve25519-dalek/u32_backend"]
 u64_backend = ["curve25519-dalek/u64_backend"]
 avx2_backend = ["curve25519-dalek/avx2_backend"]
 
-[dev-dependencies]
-sha2 = "0.8"
-[metadata.docs.rs]
+[package.metadata.docs.rs]
+features = ["nightly"]
 rustdoc-args = [
     "--html-in-header",
     "./rustdoc-include-katex-header.html",
