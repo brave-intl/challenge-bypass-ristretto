@@ -1,4 +1,4 @@
-# challenge-bypass-ristretto [![Build Status](https://travis-ci.org/evq/challenge-bypass-ristretto.svg?branch=master)](https://travis-ci.org/evq/challenge-bypass-ristretto)
+# challenge-bypass-ristretto [![Build Status](https://travis-ci.org/brave-intl/challenge-bypass-ristretto.svg?branch=master)](https://travis-ci.org/brave-intl/challenge-bypass-ristretto)
 
 **A rust implemention of the
 [privacy pass cryptographic protocol](https://www.petsymposium.org/2018/files/papers/issue3/popets-2018-0026.pdf)
