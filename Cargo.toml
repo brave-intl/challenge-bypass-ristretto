@@ -1,7 +1,7 @@
 [package]
 authors = ["eV <ev@7pr.xyz>"]
 name = "challenge-bypass-ristretto"
-version = "0.1.0-pre.1"
+version = "0.1.0-pre.2"
 readme = "README.md"
 license = "MPL-2.0"
 repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
@@ -50,6 +50,7 @@ avx2_backend = ["curve25519-dalek/avx2_backend"]
 [package.metadata.docs.rs]
 features = ["nightly"]
 rustdoc-args = [
+    "--document-private-items",
     "--html-in-header",
     "./rustdoc-include-katex-header.html",
 ]

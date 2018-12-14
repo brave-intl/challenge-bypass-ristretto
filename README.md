@@ -1,4 +1,4 @@
-# challenge-bypass-ristretto [![Build Status](https://travis-ci.org/brave-intl/challenge-bypass-ristretto.svg?branch=master)](https://travis-ci.org/brave-intl/challenge-bypass-ristretto)
+# challenge-bypass-ristretto [![](https://img.shields.io/crates/v/challenge-bypass-ristretto.svg)](https://crates.io/crates/challenge-bypass-ristretto) [![](https://docs.rs/challenge-bypass-ristretto/badge.svg)](https://docs.rs/challenge-bypass-ristretto) [![Build Status](https://travis-ci.org/brave-intl/challenge-bypass-ristretto.svg?branch=master)](https://travis-ci.org/brave-intl/challenge-bypass-ristretto)
 
 **A rust implemention of the
 [privacy pass cryptographic protocol](https://www.petsymposium.org/2018/files/papers/issue3/popets-2018-0026.pdf)
@@ -87,4 +87,4 @@ Run `cargo build`
 Run `cargo test`
 
 [`src/dleq_merlin.rs`]: src/dleq_merlin.rs
-[a more detailed writeup is also available]: docs/PROTOCOL.md
+[a more detailed writeup is also available]: https://docs.rs/challenge-bypass-ristretto#cryptographic-protocol
