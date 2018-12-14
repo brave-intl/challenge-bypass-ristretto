@@ -10,6 +10,8 @@ which is a pure-Rust implementation of group operations on Ristretto.
 It is only an implementation of the cryptographic protocol,
 it does not provide a service or FFI for use by other languages.
 
+**This crate is still a work in progress and is not yet recommended for external use.**
+
 # FFI
 
 This library exposes some functions intended to assist FFI creation but does
@@ -57,14 +59,7 @@ server marks the token as spent so it cannot be used again.
 
 # Use
 
-This crate has not yet been released, currently you can add it as a dependency 
-from this github repository.
-
-`Cargo.toml`
-```
-[dependencies.challenge-bypass-ristretto]
-git = "https://github.com/evq/challenge-bypass-ristretto"
-```
+This crate is still a work in progress and is not yet recommended for external use.
 
 ## Features
 
@@ -92,4 +87,4 @@ Run `cargo build`
 Run `cargo test`
 
 [`src/dleq_merlin.rs`]: src/dleq_merlin.rs
-[a more detailed writeup is also available]: FIXME
+[a more detailed writeup is also available]: docs/PROTOCOL.md
