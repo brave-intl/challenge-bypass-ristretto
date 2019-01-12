@@ -22,13 +22,13 @@ pub const TOKEN_LENGTH: usize = 96;
 pub const BLINDED_TOKEN_LENGTH: usize = 32;
 /// The length of a `PublicKey`, in bytes.
 pub const PUBLIC_KEY_LENGTH: usize = 64;
-/// The length of a `SIGNING_KEY_LENGTH`, in bytes.
+/// The length of a `SigningKey`, in bytes.
 pub const SIGNING_KEY_LENGTH: usize = 96;
-/// The length of a `SIGNED_TOKEN_LENGTH`, in bytes.
+/// The length of a `SignedToken`, in bytes.
 pub const SIGNED_TOKEN_LENGTH: usize = 32;
-/// The length of a `UNBLINDED_TOKEN_LENGTH`, in bytes.
+/// The length of a `UnblindedToken`, in bytes.
 pub const UNBLINDED_TOKEN_LENGTH: usize = 96;
-/// The length of a `VERIFICATION_SIGNATURE_LENGTH`, in bytes.
+/// The length of a `VerificationSignature`, in bytes.
 pub const VERIFICATION_SIGNATURE_LENGTH: usize = 64;
 
 #[cfg(test)]

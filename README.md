@@ -24,7 +24,7 @@ For FFI see [challenge-bypass-ristretto-ffi](https://github.com/brave-intl/chall
 As originally implemented in the challenge bypass
 [server](https://github.com/privacypass/challenge-bypass-server) and
 [extension](https://github.com/privacypass/challenge-bypass-extension)
-repositories, blinded tokens enable internet users can anonymously
+repositories, blinded tokens enable internet users to anonymously
 bypass internet challenges (CAPTCHAs).
 
 In this use case, upon completing a CAPTCHA a user is issued tokens which can be
