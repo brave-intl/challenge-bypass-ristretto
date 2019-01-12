@@ -60,7 +60,7 @@ mod tests {
 
         let key = SigningKey::random(&mut rng);
 
-        let blinded_tokens = vec![Token::random(&mut rng).blind()];
+        let blinded_tokens = vec![Token::random::<Sha512, OsRng>(&mut rng).blind()];
         let signed_tokens: Vec<SignedToken> = blinded_tokens
             .iter()
             .filter_map(|t| key.sign(t).ok())

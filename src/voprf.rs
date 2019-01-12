@@ -52,7 +52,7 @@ mod tests {
         // Signing
 
         // client prepares a random token and blinding scalar
-        let token = Token::random(&mut rng);
+        let token = Token::random::<Sha512, OsRng>(&mut rng);
         // client blinds the token and sends it to the server
         let blinded_token = token.blind();
 
@@ -162,14 +162,15 @@ impl_serde!(Token);
 #[allow(non_snake_case)]
 impl Token {
     /// Generates a new random `Token` using the provided random number generator.
-    pub fn random<T: Rng + CryptoRng>(rng: &mut T) -> Self {
+    pub fn random<D, T>(rng: &mut T) -> Self
+    where
+        D: Digest<OutputSize = U64> + Default,
+        T: Rng + CryptoRng,
+    {
         let mut seed = [0u8; 64];
         rng.fill(&mut seed);
         let blinding_scalar = Scalar::random(rng);
-        Token {
-            t: TokenPreimage(seed),
-            r: blinding_scalar,
-        }
+        Self::hash_from_bytes_with_blind::<D>(&seed, blinding_scalar)
     }
 
     /// Creates a new `Token`, using hashing to derive a `TokenPreimage` and the specified blind
