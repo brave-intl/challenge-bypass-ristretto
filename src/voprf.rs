@@ -2,6 +2,7 @@ use core::fmt::Debug;
 
 use clear_on_drop::clear::Clear;
 use crypto_mac::MacResult;
+use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use digest::generic_array::typenum::U64;
@@ -21,9 +22,9 @@ pub const TOKEN_LENGTH: usize = 96;
 /// The length of a `BlindedToken`, in bytes.
 pub const BLINDED_TOKEN_LENGTH: usize = 32;
 /// The length of a `PublicKey`, in bytes.
-pub const PUBLIC_KEY_LENGTH: usize = 64;
+pub const PUBLIC_KEY_LENGTH: usize = 32;
 /// The length of a `SigningKey`, in bytes.
-pub const SIGNING_KEY_LENGTH: usize = 96;
+pub const SIGNING_KEY_LENGTH: usize = 32;
 /// The length of a `SignedToken`, in bytes.
 pub const SIGNED_TOKEN_LENGTH: usize = 32;
 /// The length of a `UnblindedToken`, in bytes.
@@ -297,18 +298,12 @@ impl BlindedToken {
 }
 
 /// A `PublicKey` is a committment by the server to a particular `SigningKey`.
+///
+/// \\(Y = X^k\\)
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Copy, Clone, Debug)]
 #[allow(non_snake_case)]
-pub struct PublicKey {
-    /// `X` is a generator
-    // FIXME use the Ristretto basepoint?
-    pub(crate) X: CompressedRistretto,
-    /// `Y` is the committment to a particular key
-    ///
-    /// \\(Y = X^k\\)
-    pub(crate) Y: CompressedRistretto,
-}
+pub struct PublicKey(pub(crate) CompressedRistretto);
 
 #[cfg(feature = "base64")]
 impl_base64!(PublicKey);
@@ -319,11 +314,7 @@ impl_serde!(PublicKey);
 impl PublicKey {
     /// Convert this `PublicKey` to a byte array.
     pub fn to_bytes(&self) -> [u8; PUBLIC_KEY_LENGTH] {
-        let mut public_key_bytes: [u8; PUBLIC_KEY_LENGTH] = [0u8; PUBLIC_KEY_LENGTH];
-
-        public_key_bytes[..32].copy_from_slice(&self.X.to_bytes());
-        public_key_bytes[32..].copy_from_slice(&self.Y.to_bytes());
-        public_key_bytes
+        self.0.to_bytes()
     }
 
     fn bytes_length_error() -> TokenError {
@@ -339,15 +330,10 @@ impl PublicKey {
             return Err(PublicKey::bytes_length_error());
         }
 
-        let mut x_bits: [u8; 32] = [0u8; 32];
-        let mut y_bits: [u8; 32] = [0u8; 32];
-        x_bits.copy_from_slice(&bytes[..32]);
-        y_bits.copy_from_slice(&bytes[32..]);
+        let mut bits: [u8; 32] = [0u8; 32];
+        bits.copy_from_slice(&bytes[..32]);
 
-        Ok(PublicKey {
-            X: CompressedRistretto(x_bits),
-            Y: CompressedRistretto(y_bits),
-        })
+        Ok(PublicKey(CompressedRistretto(bits)))
     }
 }
 
@@ -380,15 +366,11 @@ impl Drop for SigningKey {
 impl SigningKey {
     /// Generates a new random `SigningKey` using the provided random number generator.
     pub fn random<T: Rng + CryptoRng>(rng: &mut T) -> Self {
-        let X = RistrettoPoint::random(rng);
         let k = Scalar::random(rng);
-        let Y = k * X;
+        let Y = &k * &constants::RISTRETTO_BASEPOINT_TABLE;
         SigningKey {
             k,
-            public_key: PublicKey {
-                X: X.compress(),
-                Y: Y.compress(),
-            },
+            public_key: PublicKey(Y.compress()),
         }
     }
 
@@ -417,11 +399,7 @@ impl SigningKey {
 
     /// Convert this `SigningKey` to a byte array.
     pub fn to_bytes(&self) -> [u8; SIGNING_KEY_LENGTH] {
-        let mut signing_key_bytes: [u8; SIGNING_KEY_LENGTH] = [0u8; SIGNING_KEY_LENGTH];
-
-        signing_key_bytes[..PUBLIC_KEY_LENGTH].copy_from_slice(&self.public_key.to_bytes());
-        signing_key_bytes[PUBLIC_KEY_LENGTH..].copy_from_slice(&self.k.to_bytes());
-        signing_key_bytes
+        self.k.to_bytes()
     }
 
     fn bytes_length_error() -> TokenError {
@@ -437,14 +415,17 @@ impl SigningKey {
             return Err(SigningKey::bytes_length_error());
         }
 
-        let public_key = PublicKey::from_bytes(&bytes[..PUBLIC_KEY_LENGTH])?;
-
-        let mut k_bits: [u8; 32] = [0u8; 32];
-        k_bits.copy_from_slice(&bytes[PUBLIC_KEY_LENGTH..]);
-        let k = Scalar::from_canonical_bytes(k_bits)
+        let mut bits: [u8; 32] = [0u8; 32];
+        bits.copy_from_slice(&bytes[..32]);
+        let k = Scalar::from_canonical_bytes(bits)
             .ok_or(TokenError(InternalError::ScalarFormatError))?;
 
-        Ok(SigningKey { public_key, k })
+        let Y = &k * &constants::RISTRETTO_BASEPOINT_TABLE;
+
+        Ok(SigningKey {
+            public_key: PublicKey(Y.compress()),
+            k,
+        })
     }
 }
 

@@ -6,6 +6,7 @@ use std::vec::Vec;
 
 use core::iter;
 
+use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::VartimeMultiscalarMul;
@@ -108,17 +109,13 @@ impl DLEQProof {
     {
         let t = Scalar::random(rng);
 
-        let A = t * k
-            .public_key
-            .X
-            .decompress()
-            .ok_or(TokenError(InternalError::PointDecompressionError))?;
+        let A = &t * &constants::RISTRETTO_BASEPOINT_TABLE;
         let B = t * P;
 
         let mut h = D::default();
 
-        let X = k.public_key.X;
-        let Y = k.public_key.Y;
+        let X = constants::RISTRETTO_BASEPOINT_COMPRESSED;
+        let Y = k.public_key.0;
         let P = P.compress();
         let Q = Q.compress();
         let A = A.compress();
@@ -173,12 +170,10 @@ impl DLEQProof {
     where
         D: Digest<OutputSize = U64> + Default,
     {
-        let X = public_key.X;
-        let Y = public_key.Y;
+        let X = constants::RISTRETTO_BASEPOINT_COMPRESSED;
+        let Y = public_key.0;
 
-        let A = (self.s
-            * X.decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?)
+        let A = (&self.s * &constants::RISTRETTO_BASEPOINT_TABLE)
             + (self.c
                 * Y.decompress()
                     .ok_or(TokenError(InternalError::PointDecompressionError))?);
@@ -296,8 +291,8 @@ impl BatchDLEQProof {
 
         let mut h = D::default();
 
-        h.input(public_key.X.as_bytes());
-        h.input(public_key.Y.as_bytes());
+        h.input(constants::RISTRETTO_BASEPOINT_COMPRESSED.as_bytes());
+        h.input(public_key.0.as_bytes());
 
         for (Pi, Qi) in blinded_tokens.iter().zip(signed_tokens.iter()) {
             h.input(Pi.0.as_bytes());
