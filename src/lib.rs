@@ -47,7 +47,7 @@ mod dleq;
 mod dleq_merlin;
 
 pub mod errors;
-mod voprf;
+mod oprf;
 
 #[cfg(not(feature = "merlin"))]
 pub use self::dleq::*;
@@ -55,4 +55,4 @@ pub use self::dleq::*;
 pub use self::dleq_merlin::*;
 
 pub use self::errors::*;
-pub use self::voprf::*;
+pub use self::oprf::*;

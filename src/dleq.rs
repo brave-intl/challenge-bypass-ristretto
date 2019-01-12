@@ -16,7 +16,7 @@ use rand::{CryptoRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 
 use errors::{InternalError, TokenError};
-use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
+use oprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
 
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 64;
@@ -25,7 +25,7 @@ pub const DLEQ_PROOF_LENGTH: usize = 64;
 mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
-    use voprf::Token;
+    use oprf::Token;
 
     use super::*;
 
