@@ -38,12 +38,67 @@ mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
+    #[cfg(feature = "base64")]
+    use base64;
+
     use super::*;
 
     type HmacSha512 = Hmac<Sha512>;
 
+    #[cfg(feature = "base64")]
+    #[allow(non_snake_case)]
     #[test]
-    fn it_works() {
+    fn oprf_vector_tests() {
+        // Generated using tools/test-vector-gen
+        let vectors = [
+("+Dk1kbjSn9YFW5FB+69XvXfYV0mxh5LcwvkoJg4InQ4=", "Kq/UNTwtL7ljgAF+zZp0Uja6CDd5viQP0b1dramQezc=", "o+4OmdQAM/y47aoNsIKAiO8pzmZJIU8Tp3GbTjiNkh1rON62hOzMmiSsLeioWLjq9GYrE6bWGyjfvuWKPPCcFg==", "AIx1yxFglDtDS04NcCNSzhcvrrRBvy4IkhrlZddQAQA=", "PNeI6lr7yWe4vMs+VoAnIrPfkrj3BXDUIrCxEcjsQjI=", "9PFa28WDbEzGurXgVZlE9jax7cY6u4sr0F1krp5YuTg=", "ghJgSTRXHeNyi9mW+/QEFhVwNuDX+gviQM05L7m77xo="),
+("Xj8WYpylf3JOxb+2Z4vcxtHxSr4HLOWKWuDqlD2YVwc=", "pCofU8Tzjqtcd+eHdZoWR/foyyx80tPNEY0qJheOWkM=", "WCr+FHUF1jwTuTFFSxKgFGtoxmPoSa/mzu7ptaNfYWnjDD8lqS3b1fBEefvLYlgm9e9uHxJlycPtC9hOMXSiLg==", "YAoHR/1+nN1VuTrT0SuRctI2c1imJvNz23PdRoQEvgk=", "pCE0yovTej3U5f2Q3dr8sUN6JJo1VgTas92P0e80ziU=", "/HFFSOT1vp+ylXvFLRqljIZkUjmVWPOkbSKw91yOjQg=", "8vFxEsB/o8kM5uxQXArDiWQeosX9WhFguJYQ5aC1pU0="),
+("/JV/RQieBIssXlpUaqzaVQFbC20903Uy6tG0TMB0YQo=", "Mpe2hnXw2mps4/CgRw0v/4nc/OuVdiKx4bhUlxbY2Go=", "WzaQeAsdhAWrSDn29yUw0gkG/E6fypjdfVidIGYRSd1oRH11glK5YAWZLRFPSKYxJfnYC5A1h4z9iIOL6uqnBQ==", "VLfkkSnT6MzKEhXe31V3Jh2dLRcYai3Qr7OiRcUiNg8=", "OmqZxwpUMo15gsVmCDnOLbdly+QCOARUwThsO36qGWs=", "fKrnJrHtPj/7WRRMQU3VqgsMCI+fkZYeHukAzriVZ28=", "7H8UU2hny7oiz9wloYBuD5GqwiyYTdgY1BYFOX29QC0="),
+("2Ap87Z81TFwN+iXzjzKX9hfKwCrG+QHSHIu8c+PC+g0=", "Dk/DizUrHYt5qAfLyWJS6C34shazHIPSu2NevLxccTA=", "E0q5iO8At68d13SE+z8iW5pthjtzGW1S5mtiCcP5bku5Cfq+1Sl13ux5ns3EgK9x60WM1iGnYvNv7LNPCzGBgA==", "OpAQACYXzOfUS58vhJ/7qk5M7Q+GIO72NkrdQ8IdAwo=", "iIlCxnY7b+OFklbUF1HFD8J6XlQq8E6wsFb9CJT3ujY=", "2lLlNVsakVwGMr1NolYoOOjP6J0GKH6rzYSCOHwgmCg=", "XoPp6yOxrp/bCBzFdJuw4ZDyLsJgxEw6cVlVaLWumxA="),
+("wBghefKgRCbQ4Olbe6xiYWn3A6khol7h7PD4ewdUjQk=", "HIkMHaJvrg9Uu7uSSDCCDRpVBbVnG0U+NPafWJQkhQ4=", "7FJuDhBC2p94piHIbfDcp+/bHMj8NTfEWCt2MXC/TYZDFppB61AbhSdo5GlzPOcT+lXAkF2pMfQTf94rrGfFzw==", "VXy9qbK1r4zJoHXMrdqazY8KKhASnMv8e5L7L5U5swg=", "NBwyEPxrYAcH1gl0kAv3VThHZ1ow9lE4U/AaEO+Bflo=", "xnut3b+hOJVbWQrTzsIhExBEKCQOTGX0ja0RELYEowU=", "KN3tTWpx0VDVXAUN/Y4nv5jmM39ANwCvD+/BS2aqWXY="),
+("8onmEEgUjezTOx+3rG4ke8emy/Yj86srFkoKV+y6XQ8=", "5rQ6xpHx9AFq9OUnMFAXloevv4MXasInSHTMHd8ZmmA=", "YgMGkBNsOHVPNxvR7oMFTO6gJuRdV4uncJiLIsdl6KHBOW7MgeYEKmmvydhIOfsRl6LZplonb2dgXLpspGu2tQ==", "tYWVdpBiKLMLOhd5Hohj5C8hqipUNkoKpXwkl1Q/cQA=", "BF9ZIg1dfwdmPausAPcscNLFZJgOUKL2tBG9jKMCjio=", "uk2QQHhlAJXC1OvZb6Nx4oCLiZ79tjMdo4oSpCUWonM=", "aENVl6N9/fgNt+BeUylyPgvVKzkJvp8aDy5BMIccB10="),
+("COf/4xp/2VlViJJVwOi2A4vWtbXltF7iYpUch7J+zQo=", "KK3cDoz2Ud97rshmP3bDDUbBjjkmsMVqrQQXviF4KXE=", "b7b8Hctnqd7S5uol1Guod6FvLS92+COkv2pnsxtRo2XYn8982SF+hpjHMQmQQBO8pbZqP8rrVtwVkYaW4m473w==", "yrsuavGZC3sPXNzfXwCaIPP7MMBaObDmLVHxb+QRTgE=", "SD7XK+a9nMCpePFsIanIFoWNlIbv3JYR+OQh1JXasg8=", "9CKR1lwXTqbCJLwDBFqB6c1DKtYPbFADJRSr6bHTcys=", "ZIEjBnPl6nOqv3VP3RjOAz98YeajaWt4aXkARvI653w="),
+("U36mIeGuUxWF96FSciw7299SvaJTHbjQXMcEwJEnlgg=", "Xls0ZTlUL9jyyRDqzaSiUt5p1XoYidJVsRV/nXqicgQ=", "GA7nSIoiudblhgAeovPGa5RemA6QG1QJnsSzANC7Pctqr7leXouHFbR0IemBB+Qy7RA8xestYpQ01sd9OzDutQ==", "yrOy/W3rLygK+h8oFVRkzX1fu+fv5ZCunmlJO1d8sQo=", "nBuDf1Zz3uhXcHuke9Wv1Alng87ra5QV/iGPMWcwH0A=", "KOqPm6O6mNd8/LmCVxre8LBRUO76c1A7e3POFAM3Tmo=", "FMitw/TLUJDc+nVMOyaWXgbiAwC8/4WNJHoAGMhaiWo="),
+("L0v3bJZAluieB6U2CB7L+5xgV4vXp2E/o86DmHZa+QE=", "fpYeJIQDL1nnnMITk9+raN4QTKywrM0HiiLbIBI+ugA=", "AKJBKG8Txpf66gauPVQJyMi6DqSzfOWtyiZrFG7S4aLlnrOPp1l6HNG/tHiYAAIV/aWsRsBIHHgGLKB9tZBNKQ==", "WqQRAmPk6EZO7Mje663YYFOHIGS9Lr34rHnSvIE/BwY=", "IgymgkGgr4maqtS42gdDRpBX+oFEkGIK4XOY0Ggy5SU=", "4hJFAqAa915C5b/Iw+QRL6Tj7V6DFetOFGmX6LYOby8=", "JApNxSUYptWpUyk1u0ae1sXNXggNa/FkNCwQB7SCRXk="),
+("1r0BIpSEqx8ic8kqFrz2UeX5Ai/mHF5AOIeisSGYGQg=", "nG+MqliUjGuLG6Lk/QWlwO0Y2NhpvnFIo7sJ25i9/ws=", "ySBIfihefgSLMpzpDaJj293WFywEfvpjYGQS7N6zIWYo6ZJuvNfcpRnXphr04vRhdsiKUyeH2zwhvMdGEjXdDA==", "FoTTK4OftH+LwYg1SNcHqFdJcp0RIhAsc8ePgrtl5QI=", "vrX04OIoTl9XeETYoGvWHtLSGq2zOdxD5bAWzH5LrSE=", "JmjSwZoM07LNUg90QtOOMxt2bAxz5n2RXoTaZLgiBXI=", "kk0TB34HaqobGBIl5xJ9Gsp+3wnQaB/gV6IuxEs/7xA="),
+        ];
+        for i in 0..vectors.len() {
+            let (k, Y, seed, r, P, Q, W) = vectors[i];
+
+            let server_key = SigningKey::decode_base64(k).unwrap();
+            let seed = base64::decode(seed).unwrap();
+
+            assert!(server_key.public_key.encode_base64() == Y);
+
+            let r_bytes = base64::decode(r).unwrap();
+            let mut r_bits: [u8; 32] = [0u8; 32];
+            r_bits.copy_from_slice(&r_bytes);
+            let r = Scalar::from_canonical_bytes(r_bits).unwrap();
+
+            let token = Token::hash_from_bytes_with_blind::<Sha512>(&seed, r);
+
+            let blinded_token = token.blind();
+
+            assert!(blinded_token.encode_base64() == P);
+
+            let signed_token = server_key.sign(&blinded_token).unwrap();
+
+            assert!(signed_token.encode_base64() == Q);
+
+            let unblinded_token = token.unblind(&signed_token).unwrap();
+
+            let W_bytes = base64::decode(W).unwrap();
+            let mut W_bits: [u8; 32] = [0u8; 32];
+            W_bits.copy_from_slice(&W_bytes[..32]);
+            let W = CompressedRistretto(W_bits);
+
+            let unblinded_token_expected = UnblindedToken { W: W, t: token.t };
+            assert!(unblinded_token.encode_base64() == unblinded_token_expected.encode_base64());
+        }
+    }
+
+    #[test]
+    fn oprf_works() {
         let mut rng = OsRng::new().unwrap();
 
         // Server setup
@@ -142,7 +197,7 @@ impl TokenPreimage {
 #[derive(Debug)]
 pub struct Token {
     /// `t` is a `TokenPreimage`
-    t: TokenPreimage,
+    pub(crate) t: TokenPreimage,
     /// `r` is a `Scalar` which is the blinding factor
     r: Scalar,
 }
