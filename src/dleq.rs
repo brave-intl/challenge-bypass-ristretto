@@ -376,7 +376,7 @@ impl BatchDLEQProof {
         D: Digest<OutputSize = U64> + Default,
         I: IntoIterator<Item = &'a Token>,
     {
-        self.verify::<D>(&blinded_tokens, signed_tokens, public_key)?;
+        self.verify::<D>(blinded_tokens, signed_tokens, public_key)?;
 
         let unblinded_tokens: Result<Vec<UnblindedToken>, TokenError> = tokens
             .into_iter()

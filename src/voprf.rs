@@ -6,5 +6,3 @@ pub use dleq::*;
 pub use dleq_merlin::*;
 
 pub use oprf::*;
-
-use errors::*;
