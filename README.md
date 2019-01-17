@@ -61,6 +61,28 @@ server marks the token as spent so it cannot be used again.
 
 This crate is still a work in progress and is not yet recommended for external use.
 
+## Security Contract
+
+This software attempts to ensure the following:
+
+1. The signing server / issuer cannot link the blinded token it sees during
+   signing with the token preimage or other info that is used at the time of 
+   redemption.
+1. The client cannot create a valid signed token without performing the VOPRF
+   protocol with the server. Each protocol run produces a single valid token
+   which cannot be used to create additional valid tokens.
+
+Given that:
+
+1. The client keeps the blind secret, at time of issuance only sends the
+   blinded token and at time of redemption only sends the payload, verification
+   signature and token preimage. The client verifies the DLEQ proof that tokens
+   were signed by a public key which was committed to previously and not a key
+   unique to the user. The client ensures that other out of band markers like IP 
+   addresses cannot be used to uniquely link issuance and verification.
+1. The server keeps the signing key secret. The server marks a token preimage
+   as spent after the first successful redemption.
+
 ## Features
 
 By default this crate uses `std` and the `u64_backend` of [curve25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek). However it is `no-std` compatible and the other `curve25519-dalek` backends can be selected.
