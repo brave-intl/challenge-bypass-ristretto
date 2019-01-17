@@ -49,7 +49,7 @@ mod tests {
     #[allow(non_snake_case)]
     #[test]
     fn oprf_vector_tests() {
-        // Generated using tools/test-vector-gen
+        // Generated using tools/oprf-test-gen
         let vectors = [
 ("+Dk1kbjSn9YFW5FB+69XvXfYV0mxh5LcwvkoJg4InQ4=", "Kq/UNTwtL7ljgAF+zZp0Uja6CDd5viQP0b1dramQezc=", "o+4OmdQAM/y47aoNsIKAiO8pzmZJIU8Tp3GbTjiNkh1rON62hOzMmiSsLeioWLjq9GYrE6bWGyjfvuWKPPCcFg==", "AIx1yxFglDtDS04NcCNSzhcvrrRBvy4IkhrlZddQAQA=", "PNeI6lr7yWe4vMs+VoAnIrPfkrj3BXDUIrCxEcjsQjI=", "9PFa28WDbEzGurXgVZlE9jax7cY6u4sr0F1krp5YuTg=", "ghJgSTRXHeNyi9mW+/QEFhVwNuDX+gviQM05L7m77xo="),
 ("Xj8WYpylf3JOxb+2Z4vcxtHxSr4HLOWKWuDqlD2YVwc=", "pCofU8Tzjqtcd+eHdZoWR/foyyx80tPNEY0qJheOWkM=", "WCr+FHUF1jwTuTFFSxKgFGtoxmPoSa/mzu7ptaNfYWnjDD8lqS3b1fBEefvLYlgm9e9uHxJlycPtC9hOMXSiLg==", "YAoHR/1+nN1VuTrT0SuRctI2c1imJvNz23PdRoQEvgk=", "pCE0yovTej3U5f2Q3dr8sUN6JJo1VgTas92P0e80ziU=", "/HFFSOT1vp+ylXvFLRqljIZkUjmVWPOkbSKw91yOjQg=", "8vFxEsB/o8kM5uxQXArDiWQeosX9WhFguJYQ5aC1pU0="),
@@ -146,6 +146,12 @@ mod tests {
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Copy, Clone)]
 pub struct TokenPreimage([u8; TOKEN_PREIMAGE_LENGTH]);
+
+impl PartialEq for TokenPreimage {
+    fn eq(&self, other: &TokenPreimage) -> bool {
+        &self.0[..] == &other.0[..]
+    }
+}
 
 #[cfg(feature = "base64")]
 impl_base64!(TokenPreimage);
@@ -264,7 +270,7 @@ impl Token {
     /// returned from the server.
     ///
     /// Returns a `TokenError` if the `SignedToken` point is not valid.
-    pub fn unblind(&self, Q: &SignedToken) -> Result<UnblindedToken, TokenError> {
+    pub(crate) fn unblind(&self, Q: &SignedToken) -> Result<UnblindedToken, TokenError> {
         Ok(UnblindedToken {
             t: self.t,
             W: (self.r.invert()

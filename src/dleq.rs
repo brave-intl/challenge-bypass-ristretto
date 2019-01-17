@@ -16,7 +16,7 @@ use rand::{CryptoRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 
 use errors::{InternalError, TokenError};
-use oprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
+use oprf::*;
 
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 64;
@@ -362,6 +362,23 @@ impl BatchDLEQProof {
             BatchDLEQProof::calculate_composites::<D>(blinded_tokens, signed_tokens, public_key)?;
 
         self.0._verify::<D>(M, Z, public_key)
+    }
+
+    /// Verify the `BatchDLEQProof` then unblind the `SignedToken`s using each corresponding `Token`
+    pub fn verify_and_unblind<'a, D, I>(&self, tokens: I, blinded_tokens: &[BlindedToken], signed_tokens: &[SignedToken], public_key: &PublicKey) -> Result<Vec<UnblindedToken>, TokenError> 
+        where
+            D: Digest<OutputSize = U64> + Default,
+            I: IntoIterator<Item=&'a Token>,
+    {
+        self.verify::<D>(&blinded_tokens, signed_tokens, public_key)?;
+
+        let unblinded_tokens: Result<Vec<UnblindedToken>, TokenError> = tokens.into_iter().zip(signed_tokens.iter()).map(|(token, signed_token)| token.unblind(signed_token)).collect();
+        unblinded_tokens.and_then(|unblinded_tokens| {
+            if unblinded_tokens.len() != signed_tokens.len() {
+                return Err(TokenError(InternalError::LengthMismatchError))
+            }
+            Ok(unblinded_tokens)
+        })
     }
 }
 
