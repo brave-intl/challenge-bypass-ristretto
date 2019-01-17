@@ -1,14 +1,14 @@
+extern crate challenge_bypass_ristretto;
 extern crate hmac;
 extern crate rand;
 extern crate sha2;
-extern crate challenge_bypass_ristretto;
 
 use hmac::Hmac;
 use rand::rngs::OsRng;
 use sha2::Sha512;
 
-use challenge_bypass_ristretto::voprf::*;
 use challenge_bypass_ristretto::errors::*;
+use challenge_bypass_ristretto::voprf::*;
 
 type HmacSha512 = Hmac<Sha512>;
 
@@ -51,11 +51,19 @@ impl Client {
         }
 
         // and sends the blinded token to the server in a signing request
-        SigningRequest{blinded_tokens: self.blinded_tokens.clone()}
+        SigningRequest {
+            blinded_tokens: self.blinded_tokens.clone(),
+        }
     }
 
     fn store_signed_tokens(&mut self, resp: SigningResponse) -> Result<(), TokenError> {
-        self.unblinded_tokens.append(&mut resp.batch_proof.verify_and_unblind::<Sha512, _>(&self.tokens, &self.blinded_tokens, &resp.signed_tokens, &resp.public_key)?);
+        self.unblinded_tokens
+            .append(&mut resp.batch_proof.verify_and_unblind::<Sha512, _>(
+                &self.tokens,
+                &self.blinded_tokens,
+                &resp.signed_tokens,
+                &resp.public_key,
+            )?);
 
         assert_eq!(self.tokens.len(), self.unblinded_tokens.len());
         Ok(())
@@ -64,8 +72,8 @@ impl Client {
     fn redeem_tokens(&self) -> RedeemRequest {
         let payload = b"test message".to_vec();
 
-        let mut preimages: Vec<TokenPreimage> = vec!();
-        let mut verification_signatures: Vec<VerificationSignature> = vec!();
+        let mut preimages: Vec<TokenPreimage> = vec![];
+        let mut verification_signatures: Vec<VerificationSignature> = vec![];
 
         for unblinded_token in self.unblinded_tokens.iter() {
             preimages.push(unblinded_token.t);
@@ -77,7 +85,11 @@ impl Client {
             verification_signatures.push(verification_key.sign::<HmacSha512>(&payload));
         }
 
-        RedeemRequest{preimages, verification_signatures, payload}
+        RedeemRequest {
+            preimages,
+            verification_signatures,
+            payload,
+        }
     }
 }
 
@@ -92,19 +104,28 @@ impl Server {
 
         let public_key = self.signing_key.public_key;
 
-        let signed_tokens: Vec<SignedToken> = req.blinded_tokens
-                    .iter()
-                    .filter_map(|t| self.signing_key.sign(t).ok())
-                    .collect();
+        let signed_tokens: Vec<SignedToken> = req
+            .blinded_tokens
+            .iter()
+            .filter_map(|t| self.signing_key.sign(t).ok())
+            .collect();
 
-        let batch_proof = BatchDLEQProof::new::<Sha512, OsRng>(&mut rng, &req.blinded_tokens, &signed_tokens, &self.signing_key)
-                        .unwrap();
+        let batch_proof = BatchDLEQProof::new::<Sha512, OsRng>(
+            &mut rng,
+            &req.blinded_tokens,
+            &signed_tokens,
+            &self.signing_key,
+        )
+        .unwrap();
 
-        SigningResponse{signed_tokens, public_key, batch_proof}
+        SigningResponse {
+            signed_tokens,
+            public_key,
+            batch_proof,
+        }
     }
 
     fn redeem_tokens(&mut self, req: &RedeemRequest) {
-
         for (preimage, client_sig) in req.preimages.iter().zip(req.verification_signatures.iter()) {
             // the server checks that the preimage has not previously been speant
             assert!(!self.spent_tokens.contains(preimage));
@@ -127,17 +148,23 @@ impl Server {
     }
 }
 
-
 #[test]
 fn e2e_works() {
     let mut rng = OsRng::new().unwrap();
     let signing_key = SigningKey::random(&mut rng);
 
-    let mut client = Client{tokens: Vec::new(), blinded_tokens: Vec::new(), unblinded_tokens: Vec::new()};
-    let mut server = Server{signing_key, spent_tokens: Vec::new()};
+    let mut client = Client {
+        tokens: Vec::new(),
+        blinded_tokens: Vec::new(),
+        unblinded_tokens: Vec::new(),
+    };
+    let mut server = Server {
+        signing_key,
+        spent_tokens: Vec::new(),
+    };
 
     let signing_req = client.create_tokens(10);
-       
+
     let signing_resp = server.sign_tokens(signing_req);
     client.store_signed_tokens(signing_resp).unwrap();
 
