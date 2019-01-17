@@ -144,5 +144,3 @@ fn e2e_works() {
     let redeem_request = client.redeem_tokens();
     server.redeem_tokens(&redeem_request);
 }
-
-

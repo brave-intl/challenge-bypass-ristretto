@@ -59,7 +59,10 @@ server marks the token as spent so it cannot be used again.
 
 # Use
 
-This crate is still a work in progress and is not yet recommended for external use.
+**WARNING** this library has not been audited, use at your own risk!
+
+## Example Usage
+See [`tests/e2e.rs`].
 
 ## Security Contract
 
@@ -109,4 +112,5 @@ Run `cargo build`
 Run `cargo test`
 
 [`src/dleq_merlin.rs`]: src/dleq_merlin.rs
+[`tests/e2e.rs`]: tests/e2e.rs
 [a more detailed writeup is also available]: https://docs.rs/challenge-bypass-ristretto#cryptographic-protocol
