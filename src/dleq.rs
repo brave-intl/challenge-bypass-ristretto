@@ -442,19 +442,27 @@ mod tests {
 
             assert_eq!(server_key.public_key.encode_base64(), Y);
 
-
             let P: Vec<&str> = P.split(',').collect();
             let Q: Vec<&str> = Q.split(',').collect();
 
-            let P: Vec<BlindedToken> = P.iter().map(|P_i| BlindedToken::decode_base64(P_i).unwrap()).collect();
+            let P: Vec<BlindedToken> = P
+                .iter()
+                .map(|P_i| BlindedToken::decode_base64(P_i).unwrap())
+                .collect();
 
-            let Q: Vec<SignedToken> = P.iter().zip(Q.into_iter()).map(|(P_i, Q_i_b64)| {
-                let Q_i = server_key.sign(P_i).unwrap();
-                assert_eq!(Q_i.encode_base64(), Q_i_b64);
-                Q_i
-            }).collect();
+            let Q: Vec<SignedToken> = P
+                .iter()
+                .zip(Q.into_iter())
+                .map(|(P_i, Q_i_b64)| {
+                    let Q_i = server_key.sign(P_i).unwrap();
+                    assert_eq!(Q_i.encode_base64(), Q_i_b64);
+                    Q_i
+                })
+                .collect();
 
-            let (M, Z) = BatchDLEQProof::calculate_composites::<Sha512>(&P, &Q, &server_key.public_key).unwrap();
+            let (M, Z) =
+                BatchDLEQProof::calculate_composites::<Sha512>(&P, &Q, &server_key.public_key)
+                    .unwrap();
 
             assert_eq!(base64::encode(&M.compress().to_bytes()[..]), M_b64);
             assert_eq!(base64::encode(&Z.compress().to_bytes()[..]), Z_b64);
@@ -463,8 +471,7 @@ mod tests {
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
 
             let batch_proof =
-                BatchDLEQProof::new::<Sha512, _>(&mut prng, &P, &Q, &server_key)
-                    .unwrap();
+                BatchDLEQProof::new::<Sha512, _>(&mut prng, &P, &Q, &server_key).unwrap();
             assert_eq!(batch_proof.encode_base64(), dleq_b64);
 
             assert!(batch_proof
