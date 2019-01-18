@@ -1,26 +1,23 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
 	"strings"
 
 	ristretto "github.com/bwesterb/go-ristretto"
 	log "github.com/sirupsen/logrus"
+	rand "github.com/tmthrgd/go-rand"
 )
 
-func DeriveFromUniformBytes(in []byte) *ristretto.Point {
-	var p ristretto.Point
-	var p2 ristretto.Point
-	var buf [32]byte
-	copy(buf[:], in[:32])
-	p.SetElligator(&buf)
-	copy(buf[:], in[32:])
-	p2.SetElligator(&buf)
-	p.Add(&p, &p2)
-	return &p
+func RandScalar(rng io.Reader) *ristretto.Scalar {
+	var s ristretto.Scalar
+	var buf [64]byte
+	rng.Read(buf[:])
+	s.SetReduced(&buf)
+	return &s
 }
 
 type Vector struct {
@@ -40,6 +37,12 @@ var verbose = flag.Bool("v", false, "verbose output")
 var num = flag.Int("n", 10, "num vectors")
 
 func main() {
+	prng_seed := [32]byte{}
+	reader, err := rand.New(prng_seed[:])
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	flag.Parse()
 
 	if *verbose {
@@ -47,47 +50,45 @@ func main() {
 	}
 
 	for i := 0; i < *num; i++ {
-		var k ristretto.Scalar
 		var Y ristretto.Point
 
 		vector := Vector{}
-		k.Rand() // generate a new secret key
-		Y.ScalarMultBase(&k)
+		k := RandScalar(reader) // generate a new secret key
+		Y.ScalarMultBase(k)
 
 		vector.Add("k", base64.StdEncoding.EncodeToString(k.Bytes()))
 
-		Y.ScalarMultBase(&k) // compute public key
+		Y.ScalarMultBase(k) // compute public key
 		vector.Add("Y", base64.StdEncoding.EncodeToString(Y.Bytes()))
 
-		seed := make([]byte, 64)
-		_, err := rand.Read(seed)
+		token_seed := make([]byte, 64)
+		_, err := reader.Read(token_seed)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		vector.Add("seed", base64.StdEncoding.EncodeToString(seed))
+		vector.Add("seed", base64.StdEncoding.EncodeToString(token_seed))
 
 		var T ristretto.Point
-		T.DeriveDalek(seed)
+		T.DeriveDalek(token_seed)
 
 		var P ristretto.Point
-		var r ristretto.Scalar
 
-		r.Rand()
+		r := RandScalar(reader)
 
 		vector.Add("r", base64.StdEncoding.EncodeToString(r.Bytes()))
 
-		P.ScalarMult(&T, &r)
+		P.ScalarMult(&T, r)
 
 		vector.Add("P", base64.StdEncoding.EncodeToString(P.Bytes()))
 
 		var Q ristretto.Point
-		Q.ScalarMult(&P, &k)
+		Q.ScalarMult(&P, k)
 
 		vector.Add("Q", base64.StdEncoding.EncodeToString(Q.Bytes()))
 
 		var r_inv ristretto.Scalar
-		r_inv.Inverse(&r)
+		r_inv.Inverse(r)
 
 		var W ristretto.Point
 		W.ScalarMult(&Q, &r_inv)

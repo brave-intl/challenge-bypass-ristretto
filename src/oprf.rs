@@ -32,113 +32,6 @@ pub const UNBLINDED_TOKEN_LENGTH: usize = 96;
 /// The length of a `VerificationSignature`, in bytes.
 pub const VERIFICATION_SIGNATURE_LENGTH: usize = 64;
 
-#[cfg(test)]
-mod tests {
-    use hmac::Hmac;
-    use rand::rngs::OsRng;
-    use sha2::Sha512;
-
-    #[cfg(feature = "base64")]
-    use base64;
-
-    use super::*;
-
-    type HmacSha512 = Hmac<Sha512>;
-
-    #[cfg(feature = "base64")]
-    #[allow(non_snake_case)]
-    #[test]
-    fn oprf_vector_tests() {
-        // Generated using tools/oprf-test-gen
-        let vectors = [
-("+Dk1kbjSn9YFW5FB+69XvXfYV0mxh5LcwvkoJg4InQ4=", "Kq/UNTwtL7ljgAF+zZp0Uja6CDd5viQP0b1dramQezc=", "o+4OmdQAM/y47aoNsIKAiO8pzmZJIU8Tp3GbTjiNkh1rON62hOzMmiSsLeioWLjq9GYrE6bWGyjfvuWKPPCcFg==", "AIx1yxFglDtDS04NcCNSzhcvrrRBvy4IkhrlZddQAQA=", "PNeI6lr7yWe4vMs+VoAnIrPfkrj3BXDUIrCxEcjsQjI=", "9PFa28WDbEzGurXgVZlE9jax7cY6u4sr0F1krp5YuTg=", "ghJgSTRXHeNyi9mW+/QEFhVwNuDX+gviQM05L7m77xo="),
-("Xj8WYpylf3JOxb+2Z4vcxtHxSr4HLOWKWuDqlD2YVwc=", "pCofU8Tzjqtcd+eHdZoWR/foyyx80tPNEY0qJheOWkM=", "WCr+FHUF1jwTuTFFSxKgFGtoxmPoSa/mzu7ptaNfYWnjDD8lqS3b1fBEefvLYlgm9e9uHxJlycPtC9hOMXSiLg==", "YAoHR/1+nN1VuTrT0SuRctI2c1imJvNz23PdRoQEvgk=", "pCE0yovTej3U5f2Q3dr8sUN6JJo1VgTas92P0e80ziU=", "/HFFSOT1vp+ylXvFLRqljIZkUjmVWPOkbSKw91yOjQg=", "8vFxEsB/o8kM5uxQXArDiWQeosX9WhFguJYQ5aC1pU0="),
-("/JV/RQieBIssXlpUaqzaVQFbC20903Uy6tG0TMB0YQo=", "Mpe2hnXw2mps4/CgRw0v/4nc/OuVdiKx4bhUlxbY2Go=", "WzaQeAsdhAWrSDn29yUw0gkG/E6fypjdfVidIGYRSd1oRH11glK5YAWZLRFPSKYxJfnYC5A1h4z9iIOL6uqnBQ==", "VLfkkSnT6MzKEhXe31V3Jh2dLRcYai3Qr7OiRcUiNg8=", "OmqZxwpUMo15gsVmCDnOLbdly+QCOARUwThsO36qGWs=", "fKrnJrHtPj/7WRRMQU3VqgsMCI+fkZYeHukAzriVZ28=", "7H8UU2hny7oiz9wloYBuD5GqwiyYTdgY1BYFOX29QC0="),
-("2Ap87Z81TFwN+iXzjzKX9hfKwCrG+QHSHIu8c+PC+g0=", "Dk/DizUrHYt5qAfLyWJS6C34shazHIPSu2NevLxccTA=", "E0q5iO8At68d13SE+z8iW5pthjtzGW1S5mtiCcP5bku5Cfq+1Sl13ux5ns3EgK9x60WM1iGnYvNv7LNPCzGBgA==", "OpAQACYXzOfUS58vhJ/7qk5M7Q+GIO72NkrdQ8IdAwo=", "iIlCxnY7b+OFklbUF1HFD8J6XlQq8E6wsFb9CJT3ujY=", "2lLlNVsakVwGMr1NolYoOOjP6J0GKH6rzYSCOHwgmCg=", "XoPp6yOxrp/bCBzFdJuw4ZDyLsJgxEw6cVlVaLWumxA="),
-("wBghefKgRCbQ4Olbe6xiYWn3A6khol7h7PD4ewdUjQk=", "HIkMHaJvrg9Uu7uSSDCCDRpVBbVnG0U+NPafWJQkhQ4=", "7FJuDhBC2p94piHIbfDcp+/bHMj8NTfEWCt2MXC/TYZDFppB61AbhSdo5GlzPOcT+lXAkF2pMfQTf94rrGfFzw==", "VXy9qbK1r4zJoHXMrdqazY8KKhASnMv8e5L7L5U5swg=", "NBwyEPxrYAcH1gl0kAv3VThHZ1ow9lE4U/AaEO+Bflo=", "xnut3b+hOJVbWQrTzsIhExBEKCQOTGX0ja0RELYEowU=", "KN3tTWpx0VDVXAUN/Y4nv5jmM39ANwCvD+/BS2aqWXY="),
-("8onmEEgUjezTOx+3rG4ke8emy/Yj86srFkoKV+y6XQ8=", "5rQ6xpHx9AFq9OUnMFAXloevv4MXasInSHTMHd8ZmmA=", "YgMGkBNsOHVPNxvR7oMFTO6gJuRdV4uncJiLIsdl6KHBOW7MgeYEKmmvydhIOfsRl6LZplonb2dgXLpspGu2tQ==", "tYWVdpBiKLMLOhd5Hohj5C8hqipUNkoKpXwkl1Q/cQA=", "BF9ZIg1dfwdmPausAPcscNLFZJgOUKL2tBG9jKMCjio=", "uk2QQHhlAJXC1OvZb6Nx4oCLiZ79tjMdo4oSpCUWonM=", "aENVl6N9/fgNt+BeUylyPgvVKzkJvp8aDy5BMIccB10="),
-("COf/4xp/2VlViJJVwOi2A4vWtbXltF7iYpUch7J+zQo=", "KK3cDoz2Ud97rshmP3bDDUbBjjkmsMVqrQQXviF4KXE=", "b7b8Hctnqd7S5uol1Guod6FvLS92+COkv2pnsxtRo2XYn8982SF+hpjHMQmQQBO8pbZqP8rrVtwVkYaW4m473w==", "yrsuavGZC3sPXNzfXwCaIPP7MMBaObDmLVHxb+QRTgE=", "SD7XK+a9nMCpePFsIanIFoWNlIbv3JYR+OQh1JXasg8=", "9CKR1lwXTqbCJLwDBFqB6c1DKtYPbFADJRSr6bHTcys=", "ZIEjBnPl6nOqv3VP3RjOAz98YeajaWt4aXkARvI653w="),
-("U36mIeGuUxWF96FSciw7299SvaJTHbjQXMcEwJEnlgg=", "Xls0ZTlUL9jyyRDqzaSiUt5p1XoYidJVsRV/nXqicgQ=", "GA7nSIoiudblhgAeovPGa5RemA6QG1QJnsSzANC7Pctqr7leXouHFbR0IemBB+Qy7RA8xestYpQ01sd9OzDutQ==", "yrOy/W3rLygK+h8oFVRkzX1fu+fv5ZCunmlJO1d8sQo=", "nBuDf1Zz3uhXcHuke9Wv1Alng87ra5QV/iGPMWcwH0A=", "KOqPm6O6mNd8/LmCVxre8LBRUO76c1A7e3POFAM3Tmo=", "FMitw/TLUJDc+nVMOyaWXgbiAwC8/4WNJHoAGMhaiWo="),
-("L0v3bJZAluieB6U2CB7L+5xgV4vXp2E/o86DmHZa+QE=", "fpYeJIQDL1nnnMITk9+raN4QTKywrM0HiiLbIBI+ugA=", "AKJBKG8Txpf66gauPVQJyMi6DqSzfOWtyiZrFG7S4aLlnrOPp1l6HNG/tHiYAAIV/aWsRsBIHHgGLKB9tZBNKQ==", "WqQRAmPk6EZO7Mje663YYFOHIGS9Lr34rHnSvIE/BwY=", "IgymgkGgr4maqtS42gdDRpBX+oFEkGIK4XOY0Ggy5SU=", "4hJFAqAa915C5b/Iw+QRL6Tj7V6DFetOFGmX6LYOby8=", "JApNxSUYptWpUyk1u0ae1sXNXggNa/FkNCwQB7SCRXk="),
-("1r0BIpSEqx8ic8kqFrz2UeX5Ai/mHF5AOIeisSGYGQg=", "nG+MqliUjGuLG6Lk/QWlwO0Y2NhpvnFIo7sJ25i9/ws=", "ySBIfihefgSLMpzpDaJj293WFywEfvpjYGQS7N6zIWYo6ZJuvNfcpRnXphr04vRhdsiKUyeH2zwhvMdGEjXdDA==", "FoTTK4OftH+LwYg1SNcHqFdJcp0RIhAsc8ePgrtl5QI=", "vrX04OIoTl9XeETYoGvWHtLSGq2zOdxD5bAWzH5LrSE=", "JmjSwZoM07LNUg90QtOOMxt2bAxz5n2RXoTaZLgiBXI=", "kk0TB34HaqobGBIl5xJ9Gsp+3wnQaB/gV6IuxEs/7xA="),
-        ];
-        for i in 0..vectors.len() {
-            let (k, Y, seed, r, P, Q, W) = vectors[i];
-
-            let server_key = SigningKey::decode_base64(k).unwrap();
-            let seed = base64::decode(seed).unwrap();
-
-            assert!(server_key.public_key.encode_base64() == Y);
-
-            let r_bytes = base64::decode(r).unwrap();
-            let mut r_bits: [u8; 32] = [0u8; 32];
-            r_bits.copy_from_slice(&r_bytes);
-            let r = Scalar::from_canonical_bytes(r_bits).unwrap();
-
-            let token = Token::hash_from_bytes_with_blind::<Sha512>(&seed, r);
-
-            let blinded_token = token.blind();
-
-            assert!(blinded_token.encode_base64() == P);
-
-            let signed_token = server_key.sign(&blinded_token).unwrap();
-
-            assert!(signed_token.encode_base64() == Q);
-
-            let unblinded_token = token.unblind(&signed_token).unwrap();
-
-            let W_bytes = base64::decode(W).unwrap();
-            let mut W_bits: [u8; 32] = [0u8; 32];
-            W_bits.copy_from_slice(&W_bytes[..32]);
-            let W = CompressedRistretto(W_bits);
-
-            let unblinded_token_expected = UnblindedToken { W: W, t: token.t };
-            assert!(unblinded_token.encode_base64() == unblinded_token_expected.encode_base64());
-        }
-    }
-
-    #[test]
-    fn oprf_works() {
-        let mut rng = OsRng::new().unwrap();
-
-        // Server setup
-
-        let server_key = SigningKey::random(&mut rng);
-
-        // Signing
-
-        // client prepares a random token and blinding scalar
-        let token = Token::random::<Sha512, OsRng>(&mut rng);
-        // client blinds the token and sends it to the server
-        let blinded_token = token.blind();
-
-        // server signs the blinded token and returns it to the client
-        let signed_token = server_key.sign(&blinded_token).unwrap();
-
-        // client uses the blinding scalar to unblind the returned signed token
-        let unblinded_token = token.unblind(&signed_token).unwrap();
-
-        // Redemption
-
-        // client derives the shared key from the unblinded token
-        let client_verification_key = unblinded_token.derive_verification_key::<Sha512>();
-        // client signs a message using the shared key
-        let client_sig = client_verification_key.sign::<HmacSha512>(b"test message");
-
-        // client sends the token preimage, signature and message to the server
-
-        // server derives the unblinded token using it's key and the clients token preimage
-        let server_unblinded_token = server_key.rederive_unblinded_token(&unblinded_token.t);
-        // server derives the shared key from the unblinded token
-        let server_verification_key = server_unblinded_token.derive_verification_key::<Sha512>();
-        // server signs the same message using the shared key
-        let server_sig = server_verification_key.sign::<HmacSha512>(b"test message");
-
-        // The server compares the client signature to it's own
-        assert!(client_sig == server_sig);
-    }
-}
-
 /// A `TokenPreimage` is a slice of bytes which can be hashed to a `RistrettoPoint`.
 ///
 /// The hash function must ensure the discrete log with respect to other points is unknown.
@@ -677,5 +570,112 @@ impl VerificationSignature {
 
         let arr: &GenericArray<u8, U64> = GenericArray::from_slice(bytes);
         Ok(VerificationSignature(MacResult::new(*arr)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use hmac::Hmac;
+    use rand::rngs::OsRng;
+    use sha2::Sha512;
+
+    #[cfg(feature = "base64")]
+    use base64;
+
+    use super::*;
+
+    type HmacSha512 = Hmac<Sha512>;
+
+    #[cfg(feature = "base64")]
+    #[allow(non_snake_case)]
+    #[test]
+    fn vector_tests() {
+        // Generated using tools/oprf-test-gen
+        let vectors = [
+("SlPD+7xZlw7l+Fr4E4dd/8E6kEouU65+ZfoN6m5iyQE=", "nGajOcg0T5IvwyBstdroFKWUwBd90yNcJU2cQJpluAg=", "nwfnvlVROHqYupd8cy0IDcsPKaBI42VpEsZTPjLueu0ptyF2nOZOQ9VxM7B02DnVMe0fKFEK+0Ws4QofS3lNbw==", "rBKvQjzCywrH+WAHjvVpB4P59cy1A0CCcYjeUioWdA0=", "iKt8hXS7Zyqy5/xbbknh/CuCmQM+Cti6uOibdKZBlEM=", "OFccZ1mrx9SSrRSoj95nEVmkbMAdggfpj6haKO0BrQQ=", "JFJyI4tUdjjtud9a4qZalp5i9QY4I0x/VhChVu4P714="),
+("7oD3U1ZwWQN/2eZhiXfHtnwmhR+yl3P7Gta+T123awI=", "vtiIh6vgqE9kaR/gvfo9rxps1pehPweuB1iJEM45ySc=", "5aaIdCtHxa37WdTfdv0dseUe4Dscqfgqyhc+24tyk0dOvpgPkE0QyRZEK0eDoOmEhgy2yVeznDjtj1HP+qaKTQ==", "yhpWSFSxFQRlZH9QtcmCrL1p27dYMEKs+sub7hfVbA8=", "qDUfb1GhqEsJg2MEo0jI5fUDsKitwSSkV6kaF3wWHBU=", "goTV+GGlPyIodeEfRu62nWVJFpj3lXMjZY6w4ABaolc=", "sgJfuuExkd+VoIXOr9gv+M7VlRnjnUtveVzWcOY6YzM="),
+("tviSLm/W8oFds67y9lMs990fjh08hQNV17/4V2bmOQY=", "5ufRlCvVKvXp1yuxxS7Jvw9LSwQUl6Q/MlT6HY2l1Hc=", "7aq3TaFBD8BV6gaMmekmCsvjN89dPgDlsyMP/tsLmQeH0McOC/5BmOpnWN1aYftf7C35gfMb7+FT+B0XFheE2w==", "Ge3prZ2jJSoh1A3ZvrSfaSA1kDziGW2I+Gmh6jniaAs=", "pOTANELrS8oor67hIYyCvrbmlMrn6Fr+04nBmFgrvxU=", "JjbfZ+UifRtHLdxcvVdI6C2SXYls9aWS0UyS6vyfCAY=", "Ki8Vb+Fm7qqeeL63/Oco95UaMOO62bRGq2fMTz5xPU8="),
+("2srhyAUoqF+s2y+NfSXluDXVxC7JBgiD2ttOSXBYPww=", "HhdUX1s812RxwznoreV7i/BHvj2Xy9tJo24GxNDmtF8=", "bQqtuvgVfQYqyyQYwXakdVEbNcP2IYpWaOpbxvVLh4L4s0DwCsG+ul5izWMqfOeAnHJWCKyl7798QfI3ZD8GwA==", "gfes2hjQSpt6QOBJnz4t/N/utBkdDS+W4GRQIYjb/wQ=", "ZnaqI3kpS5nh9B3jw6uOeUld//Q2+olaAlimWRFvcDE=", "0pISjRRLsiYWLzqiukHe1xkIEuDmibUcg9m/5zcPwSo=", "2lSAwKDv4mdzZuMSEEngBXSQBJRJoprzqKMtX9Bi/zs="),
+("pfwD6XL8PnQfJPuzg/LKKVf3QRLc4ZclvC+6GBBETgo=", "Vv9rfOewgYx7jHMyfAZfBFEBt5IuwIKwz2NbDpra+UM=", "FtP6gVFikwP+l0FWLtBl2068AFDvVYNkroESSij1wBMTIy+8SW39iiVoZXtobXIUOCoaAJAwF92paYeEQrpa/w==", "xrF8ZzEtEsGbRfJGjULVkNisgpaAO69AHZKYhyQmng4=", "rHUztBaoMDDVwOTnOxFQgEOEeG6lKBL7Tb+fluztCxo=", "dhQv3WoCFW+EcV1dpCARarugjhU/enn0UlamXDPoFxc=", "GgWeq8r+ZRsPJa50bP7y3kVAq7yBSSN8eM0oOn/U2CM="),
+("xNWxYjBW6Sty2Yy33S38IPkX6v4zAwK10Ge/WPxVVwU=", "GrqZp9KBIAi1mExq2VUhG8lIuNO/J9Ap4xATdJ5TfmM=", "xP/wuGwC7WYtLSUiZHofCaey+e6lbn4gsfBszdnOw347LSCBLfNpl4Y2wiZGYDZ1gEEEdF0pl+KN9dgkKq0ZyA==", "RclUsYJkWG7Uw0tM/rn+nyvDey/Ibwl7WkmmvkIPWwc=", "fiD5jlU2Bhu+chVrhWKvZTaVJnbmBTpDcfEAH9Kcjg4=", "mCFMTFdnxZ/gvTnVNGMmZkXWqlnnZH3JnwDKhTBT3x0=", "krmSP8LTAA0O35g7uk+o7MMYTl2qACiWu+CDZXtQJSo="),
+("lE2Tu2LzhNgU77KnsEFbqVYOc5wsbMYYzBQOcpi32Ag=", "EuJk2I4y6ZrbIn04deR+lzJS1xrBIpN+RthbPknv+gA=", "DPw4xN363pkKIT0gj794mDNPTe7X5YMP0mZ1ExVDWuGbuU9NPckmUvJD3R+W81latHPSNW2PqPbWTMT2SxLKmQ==", "Dbpt5WypybRRaQiInYndWLf/O2ewT3IEYOOdxKywNg8=", "QJH62wtVRKX0Eq1GTWVyAVuML0mpEl18VvxFn3TvTDI=", "TMRELsL1kWbyRNLQhWuIyU2j7M2FJk0trp+uR1w4hHw=", "nDiCPlbQ6HfR3MX9jRqY3id4DWo3GaZ1FvUfkmAjWyg="),
+("Tmfvkm6Kvi/BWAvqNsGsdQzJTI9tkGa4Sr0dNPTMCwc=", "iPXJcLCmT9SYYVYVfNx6br3VG1rHHF2hIrD2cVx8YGE=", "BdOrSDfezktj/f1d0HordqjIJWbfGiFn2uXhJbaqDna52ZyoRmT1Du6lTkSfDlhwORN/V1Q9iSBUgxQckzFmtg==", "0web3hpMwnqhIhu9mjAKNLfmFdJUfY3pu4clcs0G8AQ=", "Qll/1fI1hlcc3Dm6xtfo3LlJwu6fgoffCZ3VzzQvCAs=", "KNbnK4jL8SThHByYWWrzdpZHxvrTVid7aBYHnZD2BW0=", "Lti4tRDBQzwNIiTbGpPVVViHMvCEfC7ov2Ne3LrQdRg="),
+("N8oRiMuSrYdp9TMKp++AP8ridXqdX6BoPOucx2eRCQE=", "mnikks9ySHzZGMgoPZ0SRA8/JJkMh5aA+m3eqeMfqTE=", "9sNH3G618rH0vy3TKBMNRQDKOb66LUKBo9jOtMsezeN4sgAp+2pMVDMS5BATkVxXAW5dpoGUTMJ3+cfnX0plSg==", "f44zH9r/YnCyaHZnKtEc/68diotEo1GjQ5MWepNEXAk=", "EEH0FTbmxN5XoXnAHmIH0y4VjcixJ5U9T8WqXgP2IAg=", "Km0KASMeIqj0s5vswz+WEYptTx2Y0fOb9cVjb+UKexw=", "lNDdKND+R/JmDrM08Q7w7ePoXT7/hgzGU6xVBU5RFig="),
+("Nye8fMOQJv1HjCY6qxG0Br661wjd8OwNI1O0ZbkmGAc=", "5szoRS3/9jdVTmhswiS9yyaLeC2I0CfBAUzfe0zGjz8=", "OkOqxU+boJmNIhmzusoRGUDVJLfPlGd9bFV3UPpNueEHfu21um4zwQSuJUQ8hr8VgzU63fb93Rmk/0kRiOPUhw==", "ZBztTnJvQKmPkxfgzGzufhRa6o4oUPublpOIhODHKA4=", "lD1eLLmRw7ebLOd51OQSps51cZGTIg2DM+GL38bQQww=", "qA27hu9S60UX0jfnWJQgUBllQvfOPu+jQVkphi6Sv24=", "HhPZFQiNAYzG+niNmUiWut2g/YMhox86h1XyZypQfVk="),
+        ];
+        for i in 0..vectors.len() {
+            let (k, Y, seed, r, P, Q, W) = vectors[i];
+
+            let server_key = SigningKey::decode_base64(k).unwrap();
+            let seed = base64::decode(seed).unwrap();
+
+            assert!(server_key.public_key.encode_base64() == Y);
+
+            let r_bytes = base64::decode(r).unwrap();
+            let mut r_bits: [u8; 32] = [0u8; 32];
+            r_bits.copy_from_slice(&r_bytes);
+            let r = Scalar::from_canonical_bytes(r_bits).unwrap();
+
+            let token = Token::hash_from_bytes_with_blind::<Sha512>(&seed, r);
+
+            let blinded_token = token.blind();
+
+            assert!(blinded_token.encode_base64() == P);
+
+            let signed_token = server_key.sign(&blinded_token).unwrap();
+
+            assert!(signed_token.encode_base64() == Q);
+
+            let unblinded_token = token.unblind(&signed_token).unwrap();
+
+            let W_bytes = base64::decode(W).unwrap();
+            let mut W_bits: [u8; 32] = [0u8; 32];
+            W_bits.copy_from_slice(&W_bytes[..32]);
+            let W = CompressedRistretto(W_bits);
+
+            let unblinded_token_expected = UnblindedToken { W: W, t: token.t };
+            assert!(unblinded_token.encode_base64() == unblinded_token_expected.encode_base64());
+        }
+    }
+
+    #[test]
+    fn works() {
+        let mut rng = OsRng::new().unwrap();
+
+        // Server setup
+
+        let server_key = SigningKey::random(&mut rng);
+
+        // Signing
+
+        // client prepares a random token and blinding scalar
+        let token = Token::random::<Sha512, _>(&mut rng);
+        // client blinds the token and sends it to the server
+        let blinded_token = token.blind();
+
+        // server signs the blinded token and returns it to the client
+        let signed_token = server_key.sign(&blinded_token).unwrap();
+
+        // client uses the blinding scalar to unblind the returned signed token
+        let unblinded_token = token.unblind(&signed_token).unwrap();
+
+        // Redemption
+
+        // client derives the shared key from the unblinded token
+        let client_verification_key = unblinded_token.derive_verification_key::<Sha512>();
+        // client signs a message using the shared key
+        let client_sig = client_verification_key.sign::<HmacSha512>(b"test message");
+
+        // client sends the token preimage, signature and message to the server
+
+        // server derives the unblinded token using it's key and the clients token preimage
+        let server_unblinded_token = server_key.rederive_unblinded_token(&unblinded_token.t);
+        // server derives the shared key from the unblinded token
+        let server_verification_key = server_unblinded_token.derive_verification_key::<Sha512>();
+        // server signs the same message using the shared key
+        let server_sig = server_verification_key.sign::<HmacSha512>(b"test message");
+
+        // The server compares the client signature to it's own
+        assert!(client_sig == server_sig);
     }
 }
