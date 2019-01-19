@@ -24,11 +24,21 @@ func RandScalar(rng io.Reader) *ristretto.Scalar {
 }
 
 func RandPoint(rng io.Reader) *ristretto.Point {
-	var p ristretto.Point
+	var bytes [64]byte
+	rng.Read(bytes[:])
+
 	var buf [32]byte
-	rng.Read(buf[:])
-	p.SetElligator(&buf)
-	return &p
+
+	copy(buf[:], bytes[:32])
+	var p1 ristretto.Point
+	p1.SetElligator(&buf)
+
+	copy(buf[:], bytes[32:])
+	var p2 ristretto.Point
+	p2.SetElligator(&buf)
+
+	p1.Add(&p1, &p2)
+	return &p1
 }
 
 func ScalarFromHash(h hash.Hash) *ristretto.Scalar {
