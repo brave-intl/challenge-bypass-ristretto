@@ -37,6 +37,7 @@ version = "1"
 
 [dev-dependencies]
 sha2 = "0.8"
+base64 = "0.9.3"
 
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]

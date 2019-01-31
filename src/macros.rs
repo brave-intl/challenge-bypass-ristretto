@@ -1,4 +1,4 @@
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 #[macro_export]
 /// Implement the encode_base64 / decode_base64 functions for a struct which implements to_bytes / from_bytes
 macro_rules! impl_base64 {

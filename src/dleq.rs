@@ -32,7 +32,7 @@ pub struct DLEQProof {
     pub(crate) s: Scalar,
 }
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(DLEQProof);
 
 #[cfg(feature = "serde")]
@@ -213,7 +213,7 @@ impl DLEQProof {
 #[allow(non_snake_case)]
 pub struct BatchDLEQProof(DLEQProof);
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(BatchDLEQProof);
 
 #[cfg(feature = "serde")]
@@ -385,7 +385,6 @@ mod tests {
         assert!(!proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
     }
 
-    #[cfg(feature = "base64")]
     #[allow(non_snake_case)]
     #[test]
     fn vector_tests() {
@@ -423,7 +422,6 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "base64")]
     #[allow(non_snake_case)]
     #[test]
     fn batch_vector_tests() {

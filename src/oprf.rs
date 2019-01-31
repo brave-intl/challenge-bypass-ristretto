@@ -10,7 +10,7 @@ use digest::Digest;
 use hmac::Mac;
 use rand::{CryptoRng, Rng};
 
-#[cfg(any(feature = "base64", feature = "serde"))]
+#[cfg(any(test, feature = "base64", feature = "serde"))]
 use hmac::digest::generic_array::GenericArray;
 
 use errors::{InternalError, TokenError};
@@ -46,7 +46,7 @@ impl PartialEq for TokenPreimage {
     }
 }
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(TokenPreimage);
 
 #[cfg(feature = "serde")]
@@ -108,7 +108,7 @@ impl Drop for Token {
     }
 }
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(Token);
 
 #[cfg(feature = "serde")]
@@ -220,7 +220,7 @@ impl Token {
 #[derive(Copy, Clone, Debug)]
 pub struct BlindedToken(pub(crate) CompressedRistretto);
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(BlindedToken);
 
 #[cfg(feature = "serde")]
@@ -259,7 +259,7 @@ impl BlindedToken {
 #[allow(non_snake_case)]
 pub struct PublicKey(pub(crate) CompressedRistretto);
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(PublicKey);
 
 #[cfg(feature = "serde")]
@@ -303,7 +303,7 @@ pub struct SigningKey {
     pub(crate) k: Scalar,
 }
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(SigningKey);
 
 #[cfg(feature = "serde")]
@@ -390,7 +390,7 @@ impl SigningKey {
 #[derive(Copy, Clone, Debug)]
 pub struct SignedToken(pub(crate) CompressedRistretto);
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(SignedToken);
 
 #[cfg(feature = "serde")]
@@ -437,7 +437,7 @@ pub struct UnblindedToken {
     W: CompressedRistretto,
 }
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(UnblindedToken);
 
 #[cfg(feature = "serde")]
@@ -533,7 +533,7 @@ impl VerificationKey {
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
 pub struct VerificationSignature(MacResult<U64>);
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 impl_base64!(VerificationSignature);
 
 #[cfg(feature = "serde")]
@@ -545,7 +545,7 @@ impl PartialEq for VerificationSignature {
     }
 }
 
-#[cfg(any(feature = "base64", feature = "serde"))]
+#[cfg(any(test, feature = "base64", feature = "serde"))]
 impl VerificationSignature {
     /// Convert this `VerificationSignature` to a byte array.
     /// We intentionally keep this private to avoid accidental non constant time comparisons
@@ -579,14 +579,12 @@ mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
-    #[cfg(feature = "base64")]
     use base64;
 
     use super::*;
 
     type HmacSha512 = Hmac<Sha512>;
 
-    #[cfg(feature = "base64")]
     #[allow(non_snake_case)]
     #[test]
     fn vector_tests() {

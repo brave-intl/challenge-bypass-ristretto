@@ -37,7 +37,7 @@ extern crate hmac;
 extern crate rand;
 extern crate rand_chacha;
 
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 extern crate base64;
 
 #[cfg(feature = "merlin")]
