@@ -1,7 +1,7 @@
 [package]
 authors = ["eV <ev@7pr.xyz>"]
 name = "challenge-bypass-ristretto"
-version = "0.1.0-pre.2"
+version = "1.0.0-pre.0"
 readme = "README.md"
 license = "MPL-2.0"
 repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
