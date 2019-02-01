@@ -1,5 +1,6 @@
-#[cfg(feature = "base64")]
+#[cfg(any(test, feature = "base64"))]
 #[macro_export]
+/// Implement the encode_base64 / decode_base64 functions for a struct which implements to_bytes / from_bytes
 macro_rules! impl_base64 {
     ($t:ident) => {
         impl $t {
@@ -27,6 +28,7 @@ macro_rules! impl_base64 {
 
 #[cfg(feature = "serde")]
 #[macro_export]
+/// Implement the Serialize / Deserialize traits for a struct which implements to_bytes / from_bytes
 macro_rules! impl_serde {
     ($t:ident) => {
         impl ::serde::Serialize for $t {

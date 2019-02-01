@@ -24,7 +24,7 @@ For FFI see [challenge-bypass-ristretto-ffi](https://github.com/brave-intl/chall
 As originally implemented in the challenge bypass
 [server](https://github.com/privacypass/challenge-bypass-server) and
 [extension](https://github.com/privacypass/challenge-bypass-extension)
-repositories, blinded tokens enable internet users can anonymously
+repositories, blinded tokens enable internet users to anonymously
 bypass internet challenges (CAPTCHAs).
 
 In this use case, upon completing a CAPTCHA a user is issued tokens which can be
@@ -59,7 +59,32 @@ server marks the token as spent so it cannot be used again.
 
 # Use
 
-This crate is still a work in progress and is not yet recommended for external use.
+**WARNING** this library has not been audited, use at your own risk!
+
+## Example Usage
+See [`tests/e2e.rs`].
+
+## Security Contract
+
+This software attempts to ensure the following:
+
+1. The signing server / issuer cannot link the blinded token it sees during
+   signing with the token preimage or other info that is used at the time of 
+   redemption.
+1. The client cannot create a valid signed token without performing the VOPRF
+   protocol with the server. Each protocol run produces a single valid token
+   which cannot be used to create additional valid tokens.
+
+Given that:
+
+1. The client keeps the blind secret, at time of issuance only sends the
+   blinded token and at time of redemption only sends the payload, verification
+   signature and token preimage. The client verifies the DLEQ proof that tokens
+   were signed by a public key which was committed to previously and not a key
+   unique to the user. The client ensures that other out of band markers like IP 
+   addresses cannot be used to uniquely link issuance and verification.
+1. The server keeps the signing key secret. The server marks a token preimage
+   as spent after the first successful redemption.
 
 ## Features
 
@@ -87,4 +112,5 @@ Run `cargo build`
 Run `cargo test`
 
 [`src/dleq_merlin.rs`]: src/dleq_merlin.rs
+[`tests/e2e.rs`]: tests/e2e.rs
 [a more detailed writeup is also available]: https://docs.rs/challenge-bypass-ristretto#cryptographic-protocol
