@@ -24,6 +24,8 @@ pub enum InternalError {
     },
     /// Verification failed
     VerifyError,
+    /// Proving failed
+    ProvingError,
     /// Inputs differed in length
     LengthMismatchError,
     /// Decoding failed
@@ -41,6 +43,7 @@ impl Display for InternalError {
                 write!(f, "{} must be {} bytes in length", n, l)
             }
             InternalError::VerifyError => write!(f, "Verification failed"),
+            InternalError::ProvingError => write!(f, "Proving failed"),
             InternalError::LengthMismatchError => write!(f, "Inputs differed in length"),
             InternalError::DecodingError => write!(f, "Decoding failed"),
         }

@@ -6,6 +6,7 @@ use std::vec::Vec;
 
 use core::iter;
 
+use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::CompressedRistretto;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
@@ -85,6 +86,7 @@ mod tests {
     #[allow(non_snake_case)]
     fn batch_dleq_proof_works() {
         use std::vec::Vec;
+        use sha2::Sha512;
 
         let mut rng = OsRng::new().unwrap();
 
@@ -138,28 +140,21 @@ impl DLEQProof {
         Q: RistrettoPoint,
         secret_key: &SigningKey,
     ) -> Result<Self, TokenError> {
-        let X = secret_key.public_key.X;
-        let Y = secret_key.public_key.Y;
-
         transcript.dleq_domain_sep();
-
-        transcript.commit_point(b"X", &X);
-        transcript.commit_point(b"Y", &Y);
+        transcript.commit_point(b"X", &constants::RISTRETTO_BASEPOINT_COMPRESSED);
+        transcript.commit_point(b"Y", &secret_key.public_key.0);
         transcript.commit_point(b"P", &P.compress());
         transcript.commit_point(b"Q", &Q.compress());
 
+        let mut os_rng = OsRng::new().or(Err(TokenError(InternalError::ProvingError)))?;
         let mut rng = transcript
             .build_rng()
             .commit_witness_bytes(b"k", secret_key.k.as_bytes())
-            .finalize(
-                &mut OsRng::new().or(Err(TokenError(InternalError::VerifyError)))?,
-            );
+            .finalize(&mut os_rng);
         let t = Scalar::random(&mut rng);
 
-        let A = t * X
-            .decompress()
-            .ok_or(TokenError(InternalError::PointDecompressionError))?;
-        let B = t * P;
+        let A = &t * &constants::RISTRETTO_BASEPOINT_TABLE;
+        let B = &t * &P;
 
         transcript.commit_point(b"A", &A.compress());
         transcript.commit_point(b"B", &B.compress());
@@ -179,17 +174,12 @@ impl DLEQProof {
         Q: RistrettoPoint,
         public_key: &PublicKey,
     ) -> Result<(), TokenError> {
-        let X = public_key.X;
-        let Y = public_key.Y;
+        let Y = public_key
+            .0
+            .decompress()
+            .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
-        transcript.dleq_domain_sep();
-
-        let A = (self.s
-            * X.decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?)
-            + (self.c
-                * Y.decompress()
-                    .ok_or(TokenError(InternalError::PointDecompressionError))?);
+        let A = RistrettoPoint::vartime_double_scalar_mul_basepoint(&self.c, &Y, &self.s);
         let B = (self.s * P) + (self.c * Q);
 
         let P = P.compress();
@@ -197,8 +187,9 @@ impl DLEQProof {
         let A = A.compress();
         let B = B.compress();
 
-        transcript.commit_point(b"X", &X);
-        transcript.commit_point(b"Y", &Y);
+        transcript.dleq_domain_sep();
+        transcript.commit_point(b"X", &constants::RISTRETTO_BASEPOINT_COMPRESSED);
+        transcript.commit_point(b"Y", &public_key.0);
         transcript.commit_point(b"P", &P);
         transcript.commit_point(b"Q", &Q);
         transcript.commit_point(b"A", &A);
@@ -275,8 +266,8 @@ impl BatchDLEQProof {
             return Err(TokenError(InternalError::LengthMismatchError));
         }
 
-        transcript.commit_point(b"X", &public_key.X);
-        transcript.commit_point(b"Y", &public_key.Y);
+        transcript.commit_point(b"X", &constants::RISTRETTO_BASEPOINT_COMPRESSED);
+        transcript.commit_point(b"Y", &public_key.0);
 
         for (Pi, Qi) in blinded_tokens.iter().zip(signed_tokens.iter()) {
             transcript.commit_point(b"Pi", &Pi.0);
@@ -293,6 +284,7 @@ impl BatchDLEQProof {
         )
         .ok_or(TokenError(InternalError::PointDecompressionError))?;
 
+        // XXX this is a vartime function, should not be used for proving
         let Z = RistrettoPoint::optional_multiscalar_mul(
             &c_m,
             signed_tokens.iter().map(|Qi| Qi.0.decompress()),
