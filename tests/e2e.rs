@@ -1,10 +1,10 @@
 extern crate challenge_bypass_ristretto;
 extern crate hmac;
-extern crate rand;
+extern crate rand_os;
 extern crate sha2;
 
 use hmac::Hmac;
-use rand::rngs::OsRng;
+use rand_os::OsRng;
 use sha2::Sha512;
 
 use challenge_bypass_ristretto::errors::*;

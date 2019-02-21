@@ -34,8 +34,9 @@ extern crate crypto_mac;
 extern crate curve25519_dalek;
 extern crate digest;
 extern crate hmac;
-extern crate rand;
 extern crate rand_chacha;
+extern crate rand_core;
+extern crate rand_os;
 
 #[cfg(any(test, feature = "base64"))]
 extern crate base64;

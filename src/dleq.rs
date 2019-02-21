@@ -12,8 +12,8 @@ use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::VartimeMultiscalarMul;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
-use rand::{CryptoRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
+use rand_core::{CryptoRng, RngCore, SeedableRng};
 
 use errors::{InternalError, TokenError};
 use oprf::*;
@@ -49,7 +49,7 @@ impl DLEQProof {
     ) -> Result<Self, TokenError>
     where
         D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
+        T: RngCore + CryptoRng,
     {
         let t = Scalar::random(rng);
 
@@ -88,7 +88,7 @@ impl DLEQProof {
     ) -> Result<Self, TokenError>
     where
         D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
+        T: RngCore + CryptoRng,
     {
         Self::_new::<D, T>(
             rng,
@@ -277,7 +277,7 @@ impl BatchDLEQProof {
     ) -> Result<Self, TokenError>
     where
         D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
+        T: RngCore + CryptoRng,
     {
         let (M, Z) = BatchDLEQProof::calculate_composites::<D>(
             blinded_tokens,
@@ -357,7 +357,7 @@ impl BatchDLEQProof {
 mod tests {
     use curve25519_dalek::ristretto::CompressedRistretto;
     use oprf::Token;
-    use rand::rngs::OsRng;
+    use rand_os::OsRng;
     use sha2::Sha512;
 
     use super::*;

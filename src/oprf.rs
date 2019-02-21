@@ -8,7 +8,7 @@ use curve25519_dalek::scalar::Scalar;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
 use hmac::Mac;
-use rand::{CryptoRng, Rng};
+use rand_core::{CryptoRng, RngCore};
 
 #[cfg(any(test, feature = "base64", feature = "serde"))]
 use hmac::digest::generic_array::GenericArray;
@@ -120,10 +120,10 @@ impl Token {
     pub fn random<D, T>(rng: &mut T) -> Self
     where
         D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
+        T: RngCore + CryptoRng,
     {
         let mut seed = [0u8; 64];
-        rng.fill(&mut seed);
+        rng.fill_bytes(&mut seed);
         let blinding_scalar = Scalar::random(rng);
         Self::hash_from_bytes_with_blind::<D>(&seed, blinding_scalar)
     }
@@ -148,7 +148,7 @@ impl Token {
     pub fn hash_from_bytes<D, T>(rng: &mut T, bytes: &[u8]) -> Self
     where
         D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
+        T: RngCore + CryptoRng,
     {
         let blinding_scalar = Scalar::random(rng);
         Self::hash_from_bytes_with_blind::<D>(bytes, blinding_scalar)
@@ -319,7 +319,7 @@ impl Drop for SigningKey {
 #[allow(non_snake_case)]
 impl SigningKey {
     /// Generates a new random `SigningKey` using the provided random number generator.
-    pub fn random<T: Rng + CryptoRng>(rng: &mut T) -> Self {
+    pub fn random<T: RngCore + CryptoRng>(rng: &mut T) -> Self {
         let k = Scalar::random(rng);
         let Y = &k * &constants::RISTRETTO_BASEPOINT_TABLE;
         SigningKey {
@@ -576,7 +576,7 @@ impl VerificationSignature {
 #[cfg(test)]
 mod tests {
     use hmac::Hmac;
-    use rand::rngs::OsRng;
+    use rand_os::OsRng;
     use sha2::Sha512;
 
     use base64;

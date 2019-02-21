@@ -16,11 +16,12 @@ exclude = [
 [dependencies]
 clear_on_drop = "0.2.3"
 crypto-mac = "0.7"
-curve25519-dalek = { version = "1", default-features = false }
+curve25519-dalek = { version = "1.1", default-features = false }
 digest = "0.8"
 hmac = "0.7"
-rand = { version = "0.6.0", default-features = false }
+rand_core = { version = "0.3.0", default-features = false }
 rand_chacha = "0.1.0"
+rand_os = "0.1.2"
 
 [dependencies.base64]
 optional = true
