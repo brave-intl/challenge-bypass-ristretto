@@ -11,7 +11,7 @@ use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::VartimeMultiscalarMul;
 use merlin::Transcript;
-use rand;
+use rand_os::OsRng;
 
 use errors::{InternalError, TokenError};
 use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
@@ -48,7 +48,6 @@ impl TranscriptProtocol for Transcript {
 
 #[cfg(test)]
 mod tests {
-    use rand::rngs::OsRng;
     use voprf::Token;
 
     use super::*;
@@ -153,7 +152,7 @@ impl DLEQProof {
             .build_rng()
             .commit_witness_bytes(b"k", secret_key.k.as_bytes())
             .finalize(
-                &mut rand::rngs::OsRng::new().or(Err(TokenError(InternalError::VerifyError)))?,
+                &mut OsRng::new().or(Err(TokenError(InternalError::VerifyError)))?,
             );
         let t = Scalar::random(&mut rng);
 
