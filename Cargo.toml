@@ -37,6 +37,8 @@ optional = true
 version = "1"
 
 [dev-dependencies]
+serde_json = "1.0"
+serde = { version = "^1.0.0", features = ["derive"] }
 sha2 = "0.8"
 base64 = "0.9.3"
 rand = { version = "0.7.0", default-features = true }
@@ -49,6 +51,7 @@ alloc = ["curve25519-dalek/alloc"]
 u32_backend = ["curve25519-dalek/u32_backend"]
 u64_backend = ["curve25519-dalek/u64_backend"]
 avx2_backend = ["curve25519-dalek/avx2_backend"]
+serde_base64 = ["serde", "base64"]
 
 [package.metadata.docs.rs]
 features = ["nightly"]

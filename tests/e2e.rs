@@ -1,27 +1,34 @@
 extern crate challenge_bypass_ristretto;
 extern crate hmac;
 extern crate rand;
+extern crate serde;
 extern crate sha2;
 
 use hmac::Hmac;
 use rand::rngs::OsRng;
 use sha2::Sha512;
 
+#[cfg(feature = "serde_base64")]
+use serde::{Deserialize, Serialize};
+
 use challenge_bypass_ristretto::errors::*;
 use challenge_bypass_ristretto::voprf::*;
 
 type HmacSha512 = Hmac<Sha512>;
 
+#[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
 struct SigningRequest {
     blinded_tokens: Vec<BlindedToken>,
 }
 
+#[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
 struct SigningResponse {
     signed_tokens: Vec<SignedToken>,
     public_key: PublicKey,
     batch_proof: BatchDLEQProof,
 }
 
+#[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
 struct RedeemRequest {
     preimages: Vec<TokenPreimage>,
     verification_signatures: Vec<VerificationSignature>,
@@ -169,5 +176,44 @@ fn e2e_works() {
     client.store_signed_tokens(signing_resp).unwrap();
 
     let redeem_request = client.redeem_tokens();
+    server.redeem_tokens(&redeem_request);
+}
+
+#[cfg(feature = "serde_base64")]
+#[test]
+fn e2e_serde_works() {
+    let mut rng = OsRng::new().unwrap();
+    let signing_key = SigningKey::random(&mut rng);
+
+    let mut client = Client {
+        tokens: Vec::new(),
+        blinded_tokens: Vec::new(),
+        unblinded_tokens: Vec::new(),
+    };
+    let mut server = Server {
+        signing_key,
+        spent_tokens: Vec::new(),
+    };
+
+    let signing_req = client.create_tokens(10);
+
+    // serde roundtrip
+    let signing_req = serde_json::to_string(&signing_req).unwrap();
+    let signing_req: SigningRequest = serde_json::from_str(&signing_req).unwrap();
+
+    let signing_resp = server.sign_tokens(signing_req);
+
+    // serde roundtrip
+    let signing_resp = serde_json::to_string(&signing_resp).unwrap();
+    let signing_resp: SigningResponse = serde_json::from_str(&signing_resp).unwrap();
+
+    client.store_signed_tokens(signing_resp).unwrap();
+
+    let redeem_request = client.redeem_tokens();
+
+    // serde roundtrip
+    let redeem_request = serde_json::to_string(&redeem_request).unwrap();
+    let redeem_request: RedeemRequest = serde_json::from_str(&redeem_request).unwrap();
+
     server.redeem_tokens(&redeem_request);
 }

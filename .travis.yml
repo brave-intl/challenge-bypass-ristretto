@@ -18,11 +18,13 @@ matrix:
         - cargo fmt -- --check
         - cargo build
         - cargo test
+        - cargo test --features serde_base64
     - name: "nightly rust + clippy"
       rust: nightly
       script:
         - cargo build
         - cargo test
+        - cargo test --features serde_base64
     - name: "nightly rust + no_std + alloc"
       rust: nightly
       script:
