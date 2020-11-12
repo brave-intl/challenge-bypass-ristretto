@@ -638,7 +638,7 @@ mod tests {
 
     #[test]
     fn works() {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         // Server setup
 

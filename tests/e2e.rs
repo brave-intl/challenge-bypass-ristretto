@@ -36,7 +36,7 @@ struct Client {
 
 impl Client {
     fn create_tokens(&mut self, n: u8) -> SigningRequest {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         for _i in 0..n {
             // client prepares a random token and blinding scalar
@@ -100,7 +100,7 @@ struct Server {
 
 impl Server {
     fn sign_tokens(&self, req: SigningRequest) -> SigningResponse {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let public_key = self.signing_key.public_key;
 
@@ -150,7 +150,7 @@ impl Server {
 
 #[test]
 fn e2e_works() {
-    let mut rng = OsRng::new().unwrap();
+    let mut rng = OsRng;
     let signing_key = SigningKey::random(&mut rng);
 
     let mut client = Client {

@@ -365,7 +365,7 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn works() {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let key1 = SigningKey::random(&mut rng);
         let key2 = SigningKey::random(&mut rng);
@@ -483,7 +483,7 @@ mod tests {
     fn batch_works() {
         use std::vec::Vec;
 
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let key = SigningKey::random(&mut rng);
 

@@ -16,11 +16,11 @@ exclude = [
 [dependencies]
 clear_on_drop = "0.2.3"
 crypto-mac = "0.7"
-curve25519-dalek = { version = "1", default-features = false }
+curve25519-dalek = { version = "2", default-features = false }
 digest = "0.8"
 hmac = "0.7"
-rand = { version = "0.6.0", default-features = false }
-rand_chacha = "0.1.0"
+rand = { version = "0.7.0", default-features = false }
+rand_chacha = "0.2.2"
 
 [dependencies.base64]
 optional = true
@@ -38,7 +38,7 @@ version = "1"
 [dev-dependencies]
 sha2 = "0.8"
 base64 = "0.9.3"
-rand = { version = "0.6.0", default-features = true }
+rand = { version = "0.7.0", default-features = true }
 
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
