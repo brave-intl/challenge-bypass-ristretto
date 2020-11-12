@@ -15,8 +15,8 @@ use digest::Digest;
 use rand::{CryptoRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 
-use errors::{InternalError, TokenError};
-use oprf::*;
+use crate::errors::{InternalError, TokenError};
+use crate::oprf::*;
 
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 64;
@@ -356,11 +356,11 @@ impl BatchDLEQProof {
 #[cfg(test)]
 mod tests {
     use curve25519_dalek::ristretto::CompressedRistretto;
-    use oprf::Token;
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
     use super::*;
+    use crate::oprf::Token;
 
     #[test]
     #[allow(non_snake_case)]
@@ -412,7 +412,7 @@ mod tests {
 
             assert_eq!(base64::encode(&Q.compress().to_bytes()[..]), Q_b64);
 
-            let mut seed: [u8; 32] = [0u8; 32];
+            let seed: [u8; 32] = [0u8; 32];
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
 
             let dleq = DLEQProof::_new::<Sha512, _>(&mut prng, P, Q, &server_key).unwrap();
@@ -465,7 +465,7 @@ mod tests {
             assert_eq!(base64::encode(&M.compress().to_bytes()[..]), M_b64);
             assert_eq!(base64::encode(&Z.compress().to_bytes()[..]), Z_b64);
 
-            let mut seed: [u8; 32] = [0u8; 32];
+            let seed: [u8; 32] = [0u8; 32];
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
 
             let batch_proof =

@@ -29,26 +29,6 @@ extern crate alloc;
 #[macro_use]
 extern crate std;
 
-extern crate clear_on_drop;
-extern crate crypto_mac;
-extern crate curve25519_dalek;
-extern crate digest;
-extern crate hmac;
-extern crate rand;
-extern crate rand_chacha;
-
-#[cfg(any(test, feature = "base64"))]
-extern crate base64;
-
-#[cfg(feature = "merlin")]
-extern crate merlin;
-
-#[cfg(feature = "serde")]
-extern crate serde;
-
-#[cfg(test)]
-extern crate sha2;
-
 #[macro_use]
 mod macros;
 

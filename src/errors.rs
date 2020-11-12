@@ -52,7 +52,7 @@ impl Error for InternalError {}
 
 /// Errors when keys and/or tokens to or from wire formats, or verifying proofs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct TokenError(pub(crate) InternalError);
+pub struct TokenError(pub InternalError);
 
 impl Display for TokenError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

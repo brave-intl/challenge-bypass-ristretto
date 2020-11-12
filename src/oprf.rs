@@ -13,7 +13,7 @@ use rand::{CryptoRng, Rng};
 #[cfg(any(test, feature = "base64", feature = "serde"))]
 use hmac::digest::generic_array::GenericArray;
 
-use errors::{InternalError, TokenError};
+use crate::errors::{InternalError, TokenError};
 
 /// The length of a `TokenPreimage`, in bytes.
 pub const TOKEN_PREIMAGE_LENGTH: usize = 64;
