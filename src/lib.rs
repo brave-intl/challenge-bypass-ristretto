@@ -21,6 +21,10 @@
 //! [`BatchDLEQProof`]: voprf/struct.BatchDLEQProof.html
 #![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
 #![cfg_attr(feature = "nightly", doc(include = "../docs/PROTOCOL.md"))]
+//todo: remove this
+#![allow(dead_code)]
+#![allow(non_snake_case)]
+#![allow(unused_imports)]
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 extern crate alloc;
@@ -34,10 +38,13 @@ mod macros;
 
 mod oprf;
 
+pub mod pbtokens;
 #[cfg(not(feature = "merlin"))]
 mod dleq;
 #[cfg(feature = "merlin")]
 mod dleq_merlin;
+
+pub mod dleqor;
 
 pub mod errors;
 pub mod voprf;
