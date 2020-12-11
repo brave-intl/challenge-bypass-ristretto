@@ -368,10 +368,10 @@ impl PbSigningKey {
         }
     }
 
-    /// Signs the provided `BlindedPbToken`
+    /// Signs the provided `BlindedPbToken`, and returns the point `S` needed in the ZKP.
     ///
     /// Returns None if the `BlindedPbToken` point is not valid.
-    pub fn sign<D, T>(&self, P: &BlindedPbToken, bit: bool, rng: &mut T) -> Result<SignedPbToken, TokenError>
+    pub fn sign<D, T>(&self, P: &BlindedPbToken, bit: bool, rng: &mut T) -> Result<(SignedPbToken, RistrettoPoint), TokenError>
     where
         D: Digest<OutputSize = U64> + Default,
         T: Rng + CryptoRng,
@@ -390,10 +390,10 @@ impl PbSigningKey {
             .ok_or(TokenError(InternalError::PointDecompressionError))?;
         let W = self.sk_x[bit as usize] * decompressed_token  + self.sk_y[bit as usize] * S;
 
-        Ok(SignedPbToken {
+        Ok((SignedPbToken {
             point: W.compress(),
             seed,
-        })
+        }, S))
     }
 
     // todo: Give a more thorough description of the function
@@ -765,7 +765,7 @@ mod tests {
         let blinded_token = token.blind();
 
         // server signs the blinded token and returns it to the client
-        let signed_token = server_key.sign::<Sha512, _>(&blinded_token, false, &mut rng).unwrap();
+        let (signed_token, _) = server_key.sign::<Sha512, _>(&blinded_token, false, &mut rng).unwrap();
 
         // client uses the blinding scalar to unblind the returned signed token
         let unblinded_token = token.unblind::<Sha512>(&signed_token).unwrap();

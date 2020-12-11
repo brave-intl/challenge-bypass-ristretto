@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use challenge_bypass_ristretto::errors::*;
 use challenge_bypass_ristretto::pbtokens::*;
 use challenge_bypass_ristretto::dleqor::*;
+use curve25519_dalek::ristretto::RistrettoPoint;
 
 type HmacSha512 = Hmac<Sha512>;
 
@@ -25,6 +26,7 @@ struct SigningRequest {
 #[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
 struct SigningResponse {
     signed_tokens: Vec<SignedPbToken>,
+    point_S_array: Vec<RistrettoPoint>,
     public_key: PbPublicKey,
     batch_proof: BatchDLEQORProof,
 }
@@ -71,6 +73,7 @@ impl Client {
                 &self.tokens,
                 &self.blinded_tokens,
                 &resp.signed_tokens,
+                &resp.point_S_array,
                 &resp.public_key,
             )?);
 
@@ -104,22 +107,26 @@ struct Server {
 }
 
 impl Server {
-    fn sign_tokens(&self, req: SigningRequest) -> SigningResponse {
+    fn sign_tokens(&self, req: SigningRequest, label: bool) -> SigningResponse {
         let mut rng = OsRng;
 
         let public_key = self.signing_key.public_key;
 
         // todo: we probably want a fancier test for the bit marks
-        let signed_tokens: Vec<SignedPbToken> = req
-            .blinded_tokens
-            .iter()
-            .filter_map(|t| self.signing_key.sign::<Sha512, _>(t, false, &mut rng).ok())
-            .collect();
+        let mut signed_tokens: Vec<SignedPbToken> = Vec::new();
+        let mut point_S_array: Vec<RistrettoPoint> = Vec::new();
+
+        for blinded_token in req.blinded_tokens.iter() {
+            let (s, S) = self.signing_key.sign::<Sha512, _>(blinded_token, label, &mut rng).unwrap();
+            signed_tokens.push(s);
+            point_S_array.push(S);
+        };
 
         let batch_proof = BatchDLEQORProof::new::<Sha512, OsRng>(
             &mut rng,
             &req.blinded_tokens,
             &signed_tokens,
+            &point_S_array,
             &self.signing_key,
             false
         )
@@ -128,6 +135,7 @@ impl Server {
         SigningResponse {
             signed_tokens,
             public_key,
+            point_S_array,
             batch_proof,
         }
     }
@@ -180,7 +188,7 @@ fn e2e_pbtokens_works() {
 
     let signing_req = client.create_tokens(10);
 
-    let signing_resp = server.sign_tokens(signing_req);
+    let signing_resp = server.sign_tokens(signing_req, false);
     client.store_signed_tokens(signing_resp).unwrap();
 
     let redeem_request = client.redeem_tokens();
@@ -209,7 +217,7 @@ fn e2e_serde_works() {
     let signing_req = serde_json::to_string(&signing_req).unwrap();
     let signing_req: SigningRequest = serde_json::from_str(&signing_req).unwrap();
 
-    let signing_resp = server.sign_tokens(signing_req);
+    let signing_resp = server.sign_tokens(signing_req, false);
 
     // serde roundtrip
     let signing_resp = serde_json::to_string(&signing_resp).unwrap();

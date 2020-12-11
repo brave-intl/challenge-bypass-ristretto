@@ -22,6 +22,10 @@ use crate::pbtokens::*;
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQOR_PROOF_LENGTH: usize = 192;
 
+// todo: handle this constant
+/// Second generator used in PbTokens protocol
+pub const H_GENERATOR: RistrettoPoint = constants::RISTRETTO_BASEPOINT_POINT;
+
 /// A `DLEQProof` is a proof of the equivalence of the discrete logarithm between two pairs of points.
 #[allow(non_snake_case)]
 pub struct DLEQORProof {
@@ -83,8 +87,7 @@ pub struct VerifyAssignments<'a> {
 #[allow(non_snake_case)]
 impl DLEQORProof {
     /// Construct a new `DLEQProof`
-    // fn _new<D, T>(
-    fn new_alone<D, T>(
+    fn _new<D, T>(
         rng: &mut T,
         assignments: ProveAssignments,
     ) -> Result<Self, TokenError>
@@ -145,34 +148,50 @@ impl DLEQORProof {
         })
     }
 
-    // /// Construct a new `DLEQProof`
-    // pub fn new<D, T>(
-    //     rng: &mut T,
-    //     blinded_token: &BlindedToken,
-    //     signed_token: &SignedToken,
-    //     k: &SigningKey,
-    // ) -> Result<Self, TokenError>
-    //     where
-    //         D: Digest<OutputSize = U64> + Default,
-    //         T: Rng + CryptoRng,
-    // {
-    //     Self::_new::<D, T>(
-    //         rng,
-    //         blinded_token
-    //             .0
-    //             .decompress()
-    //             .ok_or(TokenError(InternalError::PointDecompressionError))?,
-    //         signed_token
-    //             .0
-    //             .decompress()
-    //             .ok_or(TokenError(InternalError::PointDecompressionError))?,
-    //         k,
-    //     )
-    // }
+    /// Construct a new `DLEQORProof`
+    pub fn new<D, T>(
+        rng: &mut T,
+        blinded_token: &BlindedPbToken,
+        signed_token: &SignedPbToken,
+        point_S: &RistrettoPoint,
+        k: &PbSigningKey,
+        bit: bool,
+    ) -> Result<Self, TokenError>
+        where
+            D: Digest<OutputSize = U64> + Default,
+            T: Rng + CryptoRng,
+    {
+        let decompressed_T = blinded_token.0
+            .decompress()
+            .ok_or(TokenError(InternalError::PointDecompressionError))?;
+
+        let decompressed_W = signed_token.point
+            .decompress()
+            .ok_or(TokenError(InternalError::PointDecompressionError))?;
+
+        let prover_assignments = ProveAssignments{
+            sk_x: &k.sk_x[bit as usize],
+            sk_y: &k.sk_y[bit as usize],
+            pk_X0: &(k.public_key.pk_X0.decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?),
+            pk_X1: &(k.public_key.pk_X1.decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?),
+            G: &constants::RISTRETTO_BASEPOINT_POINT,
+            H: &H_GENERATOR,
+            T: &decompressed_T,
+            S: &point_S,
+            W: &decompressed_W,
+            b: &(bit as usize),
+        };
+
+        Self::_new::<D, T>(
+            rng,
+            prover_assignments,
+        )
+    }
 
     /// Verify the `DLEQProof`
-    // fn _verify<D>(
-    fn verify_alone<D>(
+    fn _verify<D>(
         &self,
         assignments: VerifyAssignments,
     ) -> Result<(), TokenError>
@@ -239,28 +258,31 @@ impl DLEQORProof {
         }
     }
 
-    // /// Verify the `DLEQProof`
-    // pub fn verify<D>(
-    //     &self,
-    //     blinded_token: &BlindedToken,
-    //     signed_token: &SignedToken,
-    //     public_key: &PublicKey,
-    // ) -> Result<(), TokenError>
-    //     where
-    //         D: Digest<OutputSize = U64> + Default,
-    // {
-    //     self._verify::<D>(
-    //         blinded_token
-    //             .0
-    //             .decompress()
-    //             .ok_or(TokenError(InternalError::PointDecompressionError))?,
-    //         signed_token
-    //             .0
-    //             .decompress()
-    //             .ok_or(TokenError(InternalError::PointDecompressionError))?,
-    //         public_key,
-    //     )
-    // }
+    /// Verify the `DLEQProof`
+    pub fn verify<D>(
+        &self,
+        blinded_token: &BlindedPbToken,
+        signed_token: &SignedPbToken,
+        point_S: &RistrettoPoint,
+        public_key: &PbPublicKey,
+    ) -> Result<(), TokenError>
+        where
+            D: Digest<OutputSize = U64> + Default,
+    {
+        let verifiers_assignments = VerifyAssignments{
+            pk_X0: &public_key.pk_X0,
+            pk_X1: &public_key.pk_X1,
+            G: &constants::RISTRETTO_BASEPOINT_COMPRESSED,
+            H: &H_GENERATOR.compress(),
+            T: &blinded_token.0,
+            S: &point_S.compress(),
+            W: &signed_token.point,
+        };
+
+        self._verify::<D>(
+            verifiers_assignments
+        )
+    }
 }
 
 impl DLEQORProof {
@@ -342,7 +364,7 @@ impl BatchDLEQORProof {
     fn calculate_composites<D>(
         blinded_tokens: &[BlindedPbToken],
         signed_tokens: &[SignedPbToken],
-        S_vector: &[RistrettoPoint],
+        point_S_array: &[RistrettoPoint],
         public_key: &PbPublicKey,
     ) -> Result<(RistrettoPoint, RistrettoPoint, RistrettoPoint), TokenError>
         where
@@ -365,7 +387,7 @@ impl BatchDLEQORProof {
             h.input(Qi.point.as_bytes());
         }
 
-        for point in S_vector {
+        for point in point_S_array {
             h.input(point.compress().as_bytes());
         }
 
@@ -387,7 +409,7 @@ impl BatchDLEQORProof {
 
         let S_bar = RistrettoPoint::multiscalar_mul(
             &c_m,
-            S_vector,
+            point_S_array,
         );
 
         let W_bar = RistrettoPoint::optional_multiscalar_mul(
@@ -404,6 +426,7 @@ impl BatchDLEQORProof {
         rng: &mut T,
         blinded_tokens: &[BlindedPbToken],
         signed_tokens: &[SignedPbToken],
+        point_S_array: &[RistrettoPoint],
         signing_key: &PbSigningKey,
         bit: bool,
     ) -> Result<Self, TokenError>
@@ -411,20 +434,10 @@ impl BatchDLEQORProof {
             D: Digest<OutputSize = U64> + Default,
             T: Rng + CryptoRng,
     {
-        let mut S_vector = Vec::new();
-        for (bt, st) in blinded_tokens.iter().zip(signed_tokens.iter()) {
-            let mut hash = D::default();
-            hash.input(b"hash_derive_signing_point");
-            hash.input(st.seed);
-            hash.input(bt.0.as_bytes());
-
-            S_vector.push(RistrettoPoint::from_hash(hash));
-        }
-
         let (T_bar, S_bar, W_bar) = BatchDLEQORProof::calculate_composites::<D>(
             blinded_tokens,
             signed_tokens,
-            &S_vector,
+            point_S_array,
             &signing_key.public_key,
         )?;
 
@@ -442,7 +455,7 @@ impl BatchDLEQORProof {
             W: &W_bar,
         };
 
-        Ok(BatchDLEQORProof(DLEQORProof::new_alone::<D, T>(
+        Ok(BatchDLEQORProof(DLEQORProof::_new::<D, T>(
             rng,
             prover_assignments
         )?))
@@ -453,23 +466,15 @@ impl BatchDLEQORProof {
         &self,
         blinded_tokens: &[BlindedPbToken],
         signed_tokens: &[SignedPbToken],
+        point_S_array: &[RistrettoPoint],
         public_key: &PbPublicKey,
     ) -> Result<(), TokenError>
         where
             D: Digest<OutputSize = U64> + Default,
     {
-        let mut S_vector = Vec::new();
-        for (bt, st) in blinded_tokens.iter().zip(signed_tokens.iter()) {
-            let mut hash = D::default();
-            hash.input(b"hash_derive_signing_point");
-            hash.input(st.seed);
-            hash.input(bt.0.as_bytes());
-
-            S_vector.push(RistrettoPoint::from_hash(hash));
-        }
 
         let (T_bar, S_bar, W_bar) =
-            BatchDLEQORProof::calculate_composites::<D>(blinded_tokens, signed_tokens, &S_vector, public_key)?;
+            BatchDLEQORProof::calculate_composites::<D>(blinded_tokens, signed_tokens, point_S_array, public_key)?;
 
         let verify_assignments = VerifyAssignments{
             pk_X0: &public_key.pk_X0,
@@ -481,7 +486,7 @@ impl BatchDLEQORProof {
             W: &W_bar.compress(),
         };
 
-        self.0.verify_alone::<D>(verify_assignments)
+        self.0._verify::<D>(verify_assignments)
     }
 
     /// Verify the `BatchDLEQProof` then unblind the `SignedToken`s using each corresponding `Token`
@@ -490,13 +495,14 @@ impl BatchDLEQORProof {
         tokens: I,
         blinded_tokens: &[BlindedPbToken],
         signed_tokens: &[SignedPbToken],
+        point_S_array: &[RistrettoPoint],
         public_key: &PbPublicKey,
     ) -> Result<Vec<UnblindedPbToken>, TokenError>
         where
             D: Digest<OutputSize = U64> + Default,
             I: IntoIterator<Item = &'a PbToken>,
     {
-        self.verify::<D>(blinded_tokens, signed_tokens, public_key)?;
+        self.verify::<D>(blinded_tokens, signed_tokens, point_S_array, public_key)?;
 
         let unblinded_tokens: Result<Vec<UnblindedPbToken>, TokenError> = tokens
             .into_iter()
@@ -551,7 +557,7 @@ mod tests {
         let X0 = RistrettoPoint::random(&mut csrng);
         let b = 1usize;
 
-        let proof = self::DLEQORProof::new_alone::<Sha512, rand::rngs::OsRng>(
+        let proof = self::DLEQORProof::_new::<Sha512, rand::rngs::OsRng>(
             &mut csrng,
             ProveAssignments {
                 sk_x: &x,
@@ -567,7 +573,7 @@ mod tests {
             },
         ).unwrap();
 
-        let verification = proof.verify_alone::<Sha512>(
+        let verification = proof._verify::<Sha512>(
             VerifyAssignments {
                 pk_X0: &X0.compress(),
                 pk_X1: &X1.compress(),
@@ -596,7 +602,7 @@ mod tests {
         let X0 = RistrettoPoint::random(&mut csrng);
         let b = 1usize;
 
-        let proof = self::DLEQORProof::new_alone::<Sha512, rand::rngs::OsRng>(
+        let proof = self::DLEQORProof::_new::<Sha512, rand::rngs::OsRng>(
             &mut csrng,
             ProveAssignments {
                 sk_x: &x,
@@ -616,7 +622,7 @@ mod tests {
 
         let reconverted_proof = self::DLEQORProof::from_bytes(&proof_bytes).unwrap();
 
-        let verification = reconverted_proof.verify_alone::<Sha512>(
+        let verification = reconverted_proof._verify::<Sha512>(
             VerifyAssignments {
                 pk_X0: &X0.compress(),
                 pk_X1: &X1.compress(),
