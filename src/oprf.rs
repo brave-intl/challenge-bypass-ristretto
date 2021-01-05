@@ -544,7 +544,11 @@ impl_serde!(VerificationSignature);
 
 impl PartialEq for VerificationSignature {
     fn eq(&self, other: &VerificationSignature) -> bool {
-        self.0 == other.0
+        let mut comparison = false;
+        for i in 0..VERIFICATION_SIGNATURE_LENGTH {
+            comparison |= (self.0[i] == other.0[i]);
+        }
+        comparison
     }
 }
 
@@ -678,5 +682,9 @@ mod tests {
 
         // The server compares the client signature to it's own
         assert!(client_sig == server_sig);
+
+        // and a failing equality
+        let server_sig_fail = server_verification_key.sign::<HmacSha512>(b"failing test message");
+        assert!(!(client_sig == server_sig_fail));
     }
 }
