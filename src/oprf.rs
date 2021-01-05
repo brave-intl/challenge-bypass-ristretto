@@ -544,7 +544,17 @@ impl_serde!(VerificationSignature);
 
 impl PartialEq for VerificationSignature {
     fn eq(&self, other: &VerificationSignature) -> bool {
-        self.0 == other.0
+        // These useless slices make the optimizer elide the bounds checks.
+        // See the comment in clone_from_slice() added on Rust commit 6a7bc47.
+        // Reproducing constant time implementation of crate `constant_time_eq`,
+        // to avoid another dependency.
+        let a = &self.0[..VERIFICATION_SIGNATURE_LENGTH];
+        let b = &other.0[..VERIFICATION_SIGNATURE_LENGTH];
+        let mut comparison = 0;
+        for i in 0..VERIFICATION_SIGNATURE_LENGTH {
+            comparison |= a[i] ^ b[i];
+        }
+        comparison == 0
     }
 }
 
@@ -678,5 +688,9 @@ mod tests {
 
         // The server compares the client signature to it's own
         assert!(client_sig == server_sig);
+
+        // and a failing equality
+        let server_sig_fail = server_verification_key.sign::<HmacSha512>(b"failing test message");
+        assert!(!(client_sig == server_sig_fail));
     }
 }
