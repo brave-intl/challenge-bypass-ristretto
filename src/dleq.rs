@@ -23,6 +23,7 @@ pub const DLEQ_PROOF_LENGTH: usize = 64;
 
 /// A `DLEQProof` is a proof of the equivalence of the discrete logarithm between two pairs of points.
 #[allow(non_snake_case)]
+#[derive(Debug)]
 pub struct DLEQProof {
     /// `c` is a `Scalar`
     /// \\(c=H_3(X,Y,P,Q,A,B)\\)
@@ -211,6 +212,7 @@ impl DLEQProof {
 /// A `BatchDLEQProof` is a proof of the equivalence of the discrete logarithm between a common
 /// pair of points and one or more other pairs of points.
 #[allow(non_snake_case)]
+#[derive(Debug)]
 pub struct BatchDLEQProof(DLEQProof);
 
 #[cfg(any(test, feature = "base64"))]
