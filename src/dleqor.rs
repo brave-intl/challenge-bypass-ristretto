@@ -377,21 +377,21 @@ impl BatchDLEQORProof {
         let mut h = D::default();
 
         // todo: ensure that we are including tau correctly
-        h.input(constants::RISTRETTO_BASEPOINT_COMPRESSED.as_bytes());
-        h.input(public_key.pk_X0.as_bytes());
-        h.input(public_key.pk_X1.as_bytes());
+        h.update(constants::RISTRETTO_BASEPOINT_COMPRESSED.as_bytes());
+        h.update(public_key.pk_X0.as_bytes());
+        h.update(public_key.pk_X1.as_bytes());
 
         for (Pi, Qi) in blinded_tokens.iter().zip(signed_tokens.iter()) {
-            h.input(Pi.0.as_bytes());
-            h.input(Qi.seed);
-            h.input(Qi.point.as_bytes());
+            h.update(Pi.0.as_bytes());
+            h.update(Qi.seed);
+            h.update(Qi.point.as_bytes());
         }
 
         for point in point_S_array {
-            h.input(point.compress().as_bytes());
+            h.update(point.compress().as_bytes());
         }
 
-        let result = h.result();
+        let result = h.finalize();
 
         let mut seed: [u8; 32] = [0u8; 32];
         seed.copy_from_slice(&result[..32]);

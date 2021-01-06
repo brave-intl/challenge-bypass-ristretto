@@ -2,14 +2,14 @@
 use core::fmt::Debug;
 
 use clear_on_drop::clear::Clear;
-use crypto_mac::MacResult;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use digest::generic_array::typenum::U64;
 use digest::Digest;
-use hmac::Mac;
+use hmac::{Mac, NewMac};
 use rand::{CryptoRng, Rng};
+use std::convert::TryInto;
 
 #[cfg(any(test, feature = "base64", feature = "serde"))]
 use hmac::digest::generic_array::GenericArray;
@@ -136,8 +136,8 @@ impl PbToken {
     {
         let mut hash = D::default();
         let mut seed = [0u8; 64];
-        hash.input(bytes);
-        seed.copy_from_slice(&hash.result().as_slice());
+        hash.update(bytes);
+        seed.copy_from_slice(&hash.finalize().as_slice());
 
         PbToken {
             t: PbTokenPreimage(seed),
@@ -171,9 +171,9 @@ impl PbToken {
         // todo: ensure these things coincide with the generation
         let T = self.r * RistrettoPoint::from_uniform_bytes(&self.t.0);
         let mut hash = D::default();
-        hash.input(b"hash_derive_signing_point");
-        hash.input(Q.seed);
-        hash.input(T.compress().as_bytes());
+        hash.update(b"hash_derive_signing_point");
+        hash.update(Q.seed);
+        hash.update(T.compress().as_bytes());
 
         let S = RistrettoPoint::from_hash(hash);
         let decompressed_Q = Q.point
@@ -380,9 +380,9 @@ impl PbSigningKey {
         rng.fill(&mut seed);
 
         let mut hash = D::default();
-        hash.input(b"hash_derive_signing_point");
-        hash.input(seed);
-        hash.input(P.0.as_bytes());
+        hash.update(b"hash_derive_signing_point");
+        hash.update(seed);
+        hash.update(P.0.as_bytes());
 
         let S = RistrettoPoint::from_hash(hash);
         let decompressed_token = P.0
@@ -558,13 +558,13 @@ impl UnblindedPbToken {
             D: Digest<OutputSize = U64> + Default,
     {
         let mut hash = D::default();
-        hash.input(b"hash_derive_key");
+        hash.update(b"hash_derive_key");
 
-        hash.input(self.t.0.as_ref());
-        hash.input(self.sigma[0].as_bytes());
-        hash.input(self.sigma[1].as_bytes());
+        hash.update(self.t.0.as_ref());
+        hash.update(self.sigma[0].as_bytes());
+        hash.update(self.sigma[1].as_bytes());
 
-        let output = hash.result();
+        let output = hash.finalize();
         let mut output_bytes = [0u8; 64];
         output_bytes.copy_from_slice(&output.as_slice());
 
@@ -623,19 +623,25 @@ impl PbVerificationKey {
     /// Use the `PbVerificationKey` to "sign" a message, producing a `PbVerificationSignature`
     pub fn sign<D>(&self, message: &[u8]) -> PbVerificationSignature
         where
-            D: Mac<OutputSize = U64>,
+            D: Mac<OutputSize = U64> + NewMac,
     {
         let mut mac = D::new_varkey(self.0.as_ref()).unwrap();
-        mac.input(message);
+        mac.update(message);
 
-        PbVerificationSignature(mac.result())
+        PbVerificationSignature(mac
+            .finalize()
+            .into_bytes()
+            .as_slice()
+            .try_into()
+            .expect("Output size is U64")
+        )
     }
 
     /// Use the `PbVerificationKey` to check that the signature of a message matches the
     /// provided `PbVerificationSignature`
     pub fn verify<D>(&self, sig: &PbVerificationSignature, message: &[u8]) -> bool
         where
-            D: Mac<OutputSize = U64>,
+            D: Mac<OutputSize = U64> + NewMac,
     {
         &self.sign::<D>(message) == sig
     }
@@ -643,7 +649,7 @@ impl PbVerificationKey {
 
 /// A `PbVerificationSignature` which can be verified given the `PbVerificationKey` and message
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
-pub struct PbVerificationSignature(MacResult<U64>);
+pub struct PbVerificationSignature([u8; PB_VERIFICATION_SIGNATURE_LENGTH]);
 
 #[cfg(any(test, feature = "base64"))]
 impl_base64!(PbVerificationSignature);
@@ -653,7 +659,11 @@ impl_serde!(PbVerificationSignature);
 
 impl PartialEq for PbVerificationSignature {
     fn eq(&self, other: &PbVerificationSignature) -> bool {
-        self.0 == other.0
+        let mut comparison = false;
+        for i in 0..PB_VERIFICATION_SIGNATURE_LENGTH {
+            comparison |= self.0[i] == other.0[i];
+        }
+        comparison
     }
 }
 
@@ -662,9 +672,7 @@ impl PbVerificationSignature {
     /// Convert this `VerificationSignature` to a byte array.
     /// We intentionally keep this private to avoid accidental non constant time comparisons
     fn to_bytes(&self) -> [u8; PB_VERIFICATION_SIGNATURE_LENGTH] {
-        let mut bytes: [u8; PB_VERIFICATION_SIGNATURE_LENGTH] = [0u8; PB_VERIFICATION_SIGNATURE_LENGTH];
-        bytes.copy_from_slice(self.0.clone().code().as_slice());
-        bytes
+        self.0.clone()
     }
 
     fn bytes_length_error() -> TokenError {
@@ -680,8 +688,10 @@ impl PbVerificationSignature {
             return Err(PbVerificationSignature::bytes_length_error());
         }
 
-        let arr: &GenericArray<u8, U64> = GenericArray::from_slice(bytes);
-        Ok(PbVerificationSignature(MacResult::new(*arr)))
+        let mut key: [u8; PB_VERIFICATION_SIGNATURE_LENGTH] = [0u8; PB_VERIFICATION_SIGNATURE_LENGTH];
+
+        key.copy_from_slice(&bytes[..]);
+        Ok(PbVerificationSignature(key))
     }
 }
 
