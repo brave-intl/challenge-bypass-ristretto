@@ -63,6 +63,6 @@ impl Display for TokenError {
 #[cfg(feature = "std")]
 impl Error for TokenError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        return Some(&self.0);
+        Some(&self.0)
     }
 }
