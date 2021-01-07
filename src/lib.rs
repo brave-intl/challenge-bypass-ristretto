@@ -21,10 +21,7 @@
 //! [`BatchDLEQProof`]: voprf/struct.BatchDLEQProof.html
 #![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
 #![cfg_attr(feature = "nightly", doc(include = "../docs/PROTOCOL.md"))]
-//todo: remove this
-#![allow(dead_code)]
 #![allow(non_snake_case)]
-#![allow(unused_imports)]
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 extern crate alloc;
@@ -32,6 +29,9 @@ extern crate alloc;
 #[cfg(any(test, feature = "std"))]
 #[macro_use]
 extern crate std;
+
+#[macro_use]
+extern crate lazy_static;
 
 #[macro_use]
 mod macros;

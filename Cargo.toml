@@ -23,6 +23,8 @@ hmac = "0.10"
 rand = { version = "0.7", default-features = false }
 rand_core = "0.5.1"
 rand_chacha = "0.2.2"
+sha2 = "0.9"
+lazy_static = "1.4"
 
 [dependencies.base64]
 optional = true
@@ -40,7 +42,6 @@ version = "2"
 [dev-dependencies]
 serde_json = "1.0"
 serde = { version = "^1.0.0", features = ["derive"] }
-sha2 = "0.9"
 base64 = "0.13"
 rand = { version = "0.7", default-features = true }
 

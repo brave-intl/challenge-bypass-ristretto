@@ -22,9 +22,6 @@ use crate::pbtokens::*;
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQOR_PROOF_LENGTH: usize = 192;
 
-// todo: handle this constant
-/// Second generator used in PbTokens protocol
-pub const H_GENERATOR: RistrettoPoint = constants::RISTRETTO_BASEPOINT_POINT;
 
 /// A `DLEQProof` is a proof of the equivalence of the discrete logarithm between two pairs of points.
 #[allow(non_snake_case)]
@@ -99,6 +96,7 @@ impl DLEQORProof {
         let commitment_secret = [Scalar::random(rng); 2];
         let simulated_secrets = [Scalar::random(rng); 3];
 
+        // todo: probably here
         let mut commitments = [constants::RISTRETTO_BASEPOINT_POINT; 2];
         let mut alt_commitments = [constants::RISTRETTO_BASEPOINT_POINT; 2];
 
@@ -177,7 +175,7 @@ impl DLEQORProof {
             pk_X1: &(k.public_key.pk_X1.decompress()
                 .ok_or(TokenError(InternalError::PointDecompressionError))?),
             G: &constants::RISTRETTO_BASEPOINT_POINT,
-            H: &H_GENERATOR,
+            H: &(*H_GENERATOR),
             T: &decompressed_T,
             S: &point_S,
             W: &decompressed_W,
@@ -441,15 +439,18 @@ impl BatchDLEQORProof {
             &signing_key.public_key,
         )?;
 
-        // todo: handle these decompressions correctly
         let prover_assignments = ProveAssignments{
             sk_x: &signing_key.sk_x[bit as usize],
             sk_y: &signing_key.sk_y[bit as usize],
             b: &(bit as usize),
-            pk_X0: &signing_key.public_key.pk_X0.decompress().unwrap(),
-            pk_X1: &signing_key.public_key.pk_X1.decompress().unwrap(),
+            pk_X0: &signing_key.public_key.pk_X0
+                .decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?,
+            pk_X1: &signing_key.public_key.pk_X1
+                .decompress()
+                .ok_or(TokenError(InternalError::PointDecompressionError))?,
             G: &constants::RISTRETTO_BASEPOINT_POINT,
-            H: &constants::RISTRETTO_BASEPOINT_POINT,
+            H: &(*H_GENERATOR),
             T: &T_bar,
             S: &S_bar,
             W: &W_bar,
@@ -480,7 +481,7 @@ impl BatchDLEQORProof {
             pk_X0: &public_key.pk_X0,
             pk_X1: &public_key.pk_X1,
             G: &constants::RISTRETTO_BASEPOINT_COMPRESSED,
-            H: &constants::RISTRETTO_BASEPOINT_COMPRESSED,
+            H: &(*H_GENERATOR).compress(),
             T: &T_bar.compress(),
             S: &S_bar.compress(),
             W: &W_bar.compress(),

@@ -11,7 +11,9 @@ use hmac::{Mac, NewMac};
 use rand::{CryptoRng, Rng};
 use std::convert::TryInto;
 
-#[cfg(any(test, feature = "base64", feature = "serde"))]
+use sha2::Sha512;
+
+#[cfg(any(feature = "base64", feature = "serde"))]
 use hmac::digest::generic_array::GenericArray;
 
 use crate::errors::{InternalError, TokenError};
@@ -32,6 +34,13 @@ pub const SIGNED_PBTOKEN_LENGTH: usize = 32 + PBTOKEN_PREIMAGE_LENGTH;
 pub const UNBLINDED_PBTOKEN_LENGTH: usize = 64 + PBTOKEN_PREIMAGE_LENGTH;
 /// The length of a `PbVerificationSignature`, in bytes.
 pub const PB_VERIFICATION_SIGNATURE_LENGTH: usize = 64;
+
+lazy_static! {
+    /// Second generator used in PbTokens protocol
+    pub static ref H_GENERATOR: RistrettoPoint = RistrettoPoint::hash_from_bytes::<Sha512>(
+            b"Second generator used in the DLEQOR proof, should have unknown DLOG with the generator .__."
+        );
+}
 
 /// A `PbTokenPreimage` is a slice of bytes which can be hashed to a `RistrettoPoint`.
 ///
@@ -356,10 +365,8 @@ impl PbSigningKey {
             sk_x = [Scalar::random(rng), Scalar::random(rng)];
             sk_y = [Scalar::random(rng), Scalar::random(rng)];
 
-            //todo: we need to agree on the second generator.
-            let H = constants::RISTRETTO_BASEPOINT_TABLE;
-            pk_X0 = &sk_x[0] * &constants::RISTRETTO_BASEPOINT_TABLE + &sk_y[0] * &H;
-            pk_X1 = &sk_x[1] * &constants::RISTRETTO_BASEPOINT_TABLE + &sk_y[1] * &H;
+            pk_X0 = &sk_x[0] * &constants::RISTRETTO_BASEPOINT_TABLE + &sk_y[0] * &(*H_GENERATOR);
+            pk_X1 = &sk_x[1] * &constants::RISTRETTO_BASEPOINT_TABLE + &sk_y[1] * &(*H_GENERATOR);
         }
         PbSigningKey {
             sk_x,
@@ -463,10 +470,8 @@ impl PbSigningKey {
         let y1 = Scalar::from_canonical_bytes(bits_y1)
             .ok_or(TokenError(InternalError::ScalarFormatError))?;
 
-        // todo: need to agree on second generator
-        let H = constants::RISTRETTO_BASEPOINT_TABLE;
-        let pk_X0 = &x0 * &constants::RISTRETTO_BASEPOINT_TABLE + &y0 * &H;
-        let pk_X1 = &x1 * &constants::RISTRETTO_BASEPOINT_TABLE + &y1 * &H;
+        let pk_X0 = &x0 * &constants::RISTRETTO_BASEPOINT_TABLE + &y0 * &(*H_GENERATOR);
+        let pk_X1 = &x1 * &constants::RISTRETTO_BASEPOINT_TABLE + &y1 * &(*H_GENERATOR);
 
         Ok(PbSigningKey {
             public_key: PbPublicKey {pk_X0: pk_X0.compress(), pk_X1: pk_X1.compress()},
@@ -659,11 +664,17 @@ impl_serde!(PbVerificationSignature);
 
 impl PartialEq for PbVerificationSignature {
     fn eq(&self, other: &PbVerificationSignature) -> bool {
-        let mut comparison = false;
+        // These useless slices make the optimizer elide the bounds checks.
+        // See the comment in clone_from_slice() added on Rust commit 6a7bc47.
+        // Reproducing constant time implementation of crate `constant_time_eq`,
+        // to avoid another dependency.
+        let a = &self.0[..PB_VERIFICATION_SIGNATURE_LENGTH];
+        let b = &other.0[..PB_VERIFICATION_SIGNATURE_LENGTH];
+        let mut comparison = 0;
         for i in 0..PB_VERIFICATION_SIGNATURE_LENGTH {
-            comparison |= self.0[i] == other.0[i];
+            comparison |= a[i] ^ b[i];
         }
-        comparison
+        comparison == 0
     }
 }
 
@@ -701,11 +712,7 @@ mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
-    use base64;
-
     use super::*;
-
-    type HmacSha512 = Hmac<Sha512>;
 
 //     #[allow(non_snake_case)]
 //     #[test]
