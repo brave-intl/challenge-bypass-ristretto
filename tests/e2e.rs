@@ -182,7 +182,7 @@ fn e2e_works() {
 #[cfg(feature = "serde_base64")]
 #[test]
 fn e2e_serde_works() {
-    let mut rng = OsRng::new().unwrap();
+    let mut rng = OsRng;
     let signing_key = SigningKey::random(&mut rng);
 
     let mut client = Client {

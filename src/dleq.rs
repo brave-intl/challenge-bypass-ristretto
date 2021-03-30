@@ -42,12 +42,7 @@ impl_serde!(DLEQProof);
 #[allow(non_snake_case)]
 impl DLEQProof {
     /// Construct a new `DLEQProof`
-    fn _new<D, T>(
-        rng: &mut T,
-        P: RistrettoPoint,
-        Q: RistrettoPoint,
-        k: &SigningKey,
-    ) -> Result<Self, TokenError>
+    fn _new<D, T>(rng: &mut T, P: RistrettoPoint, Q: RistrettoPoint, k: &SigningKey) -> Self
     where
         D: Digest<OutputSize = U64> + Default,
         T: Rng + CryptoRng,
@@ -77,7 +72,7 @@ impl DLEQProof {
 
         let s = t - c * k.k;
 
-        Ok(DLEQProof { c, s })
+        DLEQProof { c, s }
     }
 
     /// Construct a new `DLEQProof`
@@ -91,7 +86,7 @@ impl DLEQProof {
         D: Digest<OutputSize = U64> + Default,
         T: Rng + CryptoRng,
     {
-        Self::_new::<D, T>(
+        Ok(Self::_new::<D, T>(
             rng,
             blinded_token
                 .0
@@ -102,7 +97,7 @@ impl DLEQProof {
                 .decompress()
                 .ok_or(TokenError(InternalError::PointDecompressionError))?,
             k,
-        )
+        ))
     }
 
     /// Verify the `DLEQProof`
@@ -291,7 +286,7 @@ impl BatchDLEQProof {
             M,
             Z,
             signing_key,
-        )?))
+        )))
     }
 
     /// Verify a `BatchDLEQProof`
@@ -375,14 +370,14 @@ mod tests {
         let P = RistrettoPoint::random(&mut rng);
         let Q = key1.k * P;
 
-        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1);
 
         assert!(proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
 
         let P = RistrettoPoint::random(&mut rng);
         let Q = key2.k * P;
 
-        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1);
 
         assert!(!proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
     }
@@ -417,7 +412,7 @@ mod tests {
             let seed: [u8; 32] = [0u8; 32];
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
 
-            let dleq = DLEQProof::_new::<Sha512, _>(&mut prng, P, Q, &server_key).unwrap();
+            let dleq = DLEQProof::_new::<Sha512, _>(&mut prng, P, Q, &server_key);
             assert_eq!(dleq.encode_base64(), dleq_b64);
 
             assert!(dleq._verify::<Sha512>(P, Q, &server_key.public_key).is_ok());

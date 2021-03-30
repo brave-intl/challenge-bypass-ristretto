@@ -42,7 +42,7 @@ pub struct TokenPreimage([u8; TOKEN_PREIMAGE_LENGTH]);
 
 impl PartialEq for TokenPreimage {
     fn eq(&self, other: &TokenPreimage) -> bool {
-        &self.0[..] == &other.0[..]
+        self.0[..] == other.0[..]
     }
 }
 
