@@ -41,6 +41,7 @@ struct Client {
     unblinded_tokens: Vec<UnblindedToken>,
 }
 
+#[cfg(not(feature = "merlin"))]
 impl Client {
     fn create_tokens(&mut self, n: u8) -> SigningRequest {
         let mut rng = OsRng;
@@ -105,6 +106,7 @@ struct Server {
     spent_tokens: Vec<TokenPreimage>,
 }
 
+#[cfg(not(feature = "merlin"))]
 impl Server {
     fn sign_tokens(&self, req: SigningRequest) -> SigningResponse {
         let mut rng = OsRng;
@@ -156,6 +158,7 @@ impl Server {
 }
 
 #[test]
+#[cfg(not(feature = "merlin"))]
 fn e2e_works() {
     let mut rng = OsRng;
     let signing_key = SigningKey::random(&mut rng);

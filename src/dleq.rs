@@ -61,12 +61,12 @@ impl DLEQProof {
         let A = A.compress();
         let B = B.compress();
 
-        h.input(X.as_bytes());
-        h.input(Y.as_bytes());
-        h.input(P.as_bytes());
-        h.input(Q.as_bytes());
-        h.input(A.as_bytes());
-        h.input(B.as_bytes());
+        h.update(X.as_bytes());
+        h.update(Y.as_bytes());
+        h.update(P.as_bytes());
+        h.update(Q.as_bytes());
+        h.update(A.as_bytes());
+        h.update(B.as_bytes());
 
         let c = Scalar::from_hash(h);
 
@@ -126,12 +126,12 @@ impl DLEQProof {
 
         let mut h = D::default();
 
-        h.input(X.as_bytes());
-        h.input(Y.as_bytes());
-        h.input(P.as_bytes());
-        h.input(Q.as_bytes());
-        h.input(A.as_bytes());
-        h.input(B.as_bytes());
+        h.update(X.as_bytes());
+        h.update(Y.as_bytes());
+        h.update(P.as_bytes());
+        h.update(Q.as_bytes());
+        h.update(A.as_bytes());
+        h.update(B.as_bytes());
 
         let c = Scalar::from_hash(h);
 
@@ -232,15 +232,15 @@ impl BatchDLEQProof {
 
         let mut h = D::default();
 
-        h.input(constants::RISTRETTO_BASEPOINT_COMPRESSED.as_bytes());
-        h.input(public_key.0.as_bytes());
+        h.update(constants::RISTRETTO_BASEPOINT_COMPRESSED.as_bytes());
+        h.update(public_key.0.as_bytes());
 
         for (Pi, Qi) in blinded_tokens.iter().zip(signed_tokens.iter()) {
-            h.input(Pi.0.as_bytes());
-            h.input(Qi.0.as_bytes());
+            h.update(Pi.0.as_bytes());
+            h.update(Qi.0.as_bytes());
         }
 
-        let result = h.result();
+        let result = h.finalize();
 
         let mut seed: [u8; 32] = [0u8; 32];
         seed.copy_from_slice(&result[..32]);

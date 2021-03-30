@@ -13,8 +13,12 @@ use curve25519_dalek::traits::VartimeMultiscalarMul;
 use merlin::Transcript;
 use rand;
 
-use errors::{InternalError, TokenError};
-use voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
+use crate::errors::{InternalError, TokenError};
+use crate::voprf::{BlindedToken, PublicKey, SignedToken, SigningKey};
+use curve25519_dalek::constants;
+
+use rand_chacha::ChaChaRng;
+use rand_core::SeedableRng;
 
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 64;
@@ -28,15 +32,15 @@ trait TranscriptProtocol {
 
 impl TranscriptProtocol for Transcript {
     fn dleq_domain_sep(&mut self) {
-        self.commit_bytes(b"dom-sep", b"dleq");
+        self.append_message(b"dom-sep", b"dleq");
     }
 
     fn batch_dleq_domain_sep(&mut self) {
-        self.commit_bytes(b"dom-sep", b"batch-dleq");
+        self.append_message(b"dom-sep", b"batch-dleq");
     }
 
     fn commit_point(&mut self, label: &'static [u8], point: &CompressedRistretto) {
-        self.commit_bytes(label, point.as_bytes());
+        self.append_message(label, point.as_bytes());
     }
 
     fn challenge_scalar(&mut self, label: &'static [u8]) -> Scalar {
@@ -48,15 +52,16 @@ impl TranscriptProtocol for Transcript {
 
 #[cfg(test)]
 mod tests {
-    use rand::rngs::OsRng;
-    use voprf::Token;
-
     use super::*;
+
+    use rand::rngs::OsRng;
+    use crate::voprf::Token;
+    use sha2::Sha512;
 
     #[test]
     #[allow(non_snake_case)]
     fn dleq_proof_works() {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let key1 = SigningKey::random(&mut rng);
         let key2 = SigningKey::random(&mut rng);
@@ -87,7 +92,7 @@ mod tests {
     fn batch_dleq_proof_works() {
         use std::vec::Vec;
 
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let key = SigningKey::random(&mut rng);
 
@@ -139,8 +144,8 @@ impl DLEQProof {
         Q: RistrettoPoint,
         secret_key: &SigningKey,
     ) -> Result<Self, TokenError> {
-        let X = secret_key.public_key.X;
-        let Y = secret_key.public_key.Y;
+        let X = constants::RISTRETTO_BASEPOINT_COMPRESSED;
+        let Y = secret_key.public_key.0;
 
         transcript.dleq_domain_sep();
 
@@ -151,10 +156,9 @@ impl DLEQProof {
 
         let mut rng = transcript
             .build_rng()
-            .commit_witness_bytes(b"k", secret_key.k.as_bytes())
-            .finalize(
-                &mut rand::rngs::OsRng::new().or(Err(TokenError(InternalError::VerifyError)))?,
-            );
+            .rekey_with_witness_bytes(b"k", secret_key.k.as_bytes())
+            .finalize(&mut ChaChaRng::from_seed([0; 32]));
+
         let t = Scalar::random(&mut rng);
 
         let A = t * X
@@ -180,14 +184,13 @@ impl DLEQProof {
         Q: RistrettoPoint,
         public_key: &PublicKey,
     ) -> Result<(), TokenError> {
-        let X = public_key.X;
-        let Y = public_key.Y;
+        let X = constants::RISTRETTO_BASEPOINT_COMPRESSED;
+        let Y = public_key.0;
 
         transcript.dleq_domain_sep();
 
-        let A = (self.s
-            * X.decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?)
+        let A = (&self.s
+            * &constants::RISTRETTO_BASEPOINT_TABLE)
             + (self.c
                 * Y.decompress()
                     .ok_or(TokenError(InternalError::PointDecompressionError))?);
@@ -276,8 +279,8 @@ impl BatchDLEQProof {
             return Err(TokenError(InternalError::LengthMismatchError));
         }
 
-        transcript.commit_point(b"X", &public_key.X);
-        transcript.commit_point(b"Y", &public_key.Y);
+        transcript.commit_point(b"X", &constants::RISTRETTO_BASEPOINT_COMPRESSED);
+        transcript.commit_point(b"Y", &public_key.0);
 
         for (Pi, Qi) in blinded_tokens.iter().zip(signed_tokens.iter()) {
             transcript.commit_point(b"Pi", &Pi.0);

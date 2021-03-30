@@ -15,17 +15,18 @@ exclude = [
 ]
 
 [dependencies]
-clear_on_drop = "0.2.3"
-crypto-mac = "0.7"
-curve25519-dalek = { version = "2", default-features = false }
-digest = "0.8"
-hmac = "0.7"
-rand = { version = "0.7.0", default-features = false }
+clear_on_drop = "0.2"
+crypto-mac = "0.10"
+curve25519-dalek = { version = "3", default-features = false }
+digest = "0.9"
+hmac = "0.10"
+rand = { version = "0.7", default-features = false }
+rand_core = "0.5.1"
 rand_chacha = "0.2.2"
 
 [dependencies.base64]
 optional = true
-version = "0.9.3"
+version = "0.13"
 
 [dependencies.serde]
 optional = true
@@ -34,14 +35,14 @@ default-features = false
 
 [dependencies.merlin]
 optional = true
-version = "1"
+version = "2"
 
 [dev-dependencies]
 serde_json = "1.0"
 serde = { version = "^1.0.0", features = ["derive"] }
-sha2 = "0.8"
-base64 = "0.9.3"
-rand = { version = "0.7.0", default-features = true }
+sha2 = "0.9"
+base64 = "0.13"
+rand = { version = "0.7", default-features = true }
 
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
