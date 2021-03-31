@@ -5,10 +5,11 @@ use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use digest::generic_array::typenum::U64;
-use digest::{Digest};
+use digest::Digest;
+use hmac::digest::generic_array::GenericArray;
 use hmac::{Mac, NewMac};
 use rand::{CryptoRng, Rng};
-use std::convert::TryInto;
+use subtle::{Choice, ConstantTimeEq};
 
 use crate::errors::{InternalError, TokenError};
 
@@ -513,13 +514,7 @@ impl VerificationKey {
         let mut mac = D::new_varkey(self.0.as_ref()).unwrap();
         mac.update(message);
 
-        VerificationSignature(mac
-                .finalize()
-                .into_bytes()
-                .as_slice()
-                .try_into()
-            .expect("Output size is U64")
-        )
+        VerificationSignature(mac.finalize().into_bytes())
     }
 
     /// Use the `VerificationKey` to check that the signature of a message matches the
@@ -534,7 +529,7 @@ impl VerificationKey {
 
 /// A `VerificationSignature` which can be verified given the `VerificationKey` and message
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
-pub struct VerificationSignature([u8; VERIFICATION_SIGNATURE_LENGTH]);
+pub struct VerificationSignature(GenericArray<u8, U64>);
 
 #[cfg(any(test, feature = "base64"))]
 impl_base64!(VerificationSignature);
@@ -542,19 +537,14 @@ impl_base64!(VerificationSignature);
 #[cfg(feature = "serde")]
 impl_serde!(VerificationSignature);
 
+impl ConstantTimeEq for VerificationSignature {
+    fn ct_eq(&self, other: &VerificationSignature) -> Choice {
+        self.0.ct_eq(&other.0)
+    }
+}
 impl PartialEq for VerificationSignature {
     fn eq(&self, other: &VerificationSignature) -> bool {
-        // These useless slices make the optimizer elide the bounds checks.
-        // See the comment in clone_from_slice() added on Rust commit 6a7bc47.
-        // Reproducing constant time implementation of crate `constant_time_eq`,
-        // to avoid another dependency.
-        let a = &self.0[..VERIFICATION_SIGNATURE_LENGTH];
-        let b = &other.0[..VERIFICATION_SIGNATURE_LENGTH];
-        let mut comparison = 0;
-        for i in 0..VERIFICATION_SIGNATURE_LENGTH {
-            comparison |= a[i] ^ b[i];
-        }
-        comparison == 0
+        self.ct_eq(other).unwrap_u8() == 1
     }
 }
 
@@ -563,7 +553,9 @@ impl VerificationSignature {
     /// Convert this `VerificationSignature` to a byte array.
     /// We intentionally keep this private to avoid accidental non constant time comparisons
     fn to_bytes(&self) -> [u8; VERIFICATION_SIGNATURE_LENGTH] {
-        self.0.clone()
+        let mut bytes: [u8; VERIFICATION_SIGNATURE_LENGTH] = [0u8; VERIFICATION_SIGNATURE_LENGTH];
+        bytes.copy_from_slice(self.0.as_slice());
+        bytes
     }
 
     fn bytes_length_error() -> TokenError {
@@ -579,13 +571,10 @@ impl VerificationSignature {
             return Err(VerificationSignature::bytes_length_error());
         }
 
-        let mut key: [u8; VERIFICATION_SIGNATURE_LENGTH] = [0u8; VERIFICATION_SIGNATURE_LENGTH];
-
-        key.copy_from_slice(&bytes[..]);
-        Ok(VerificationSignature(key))
+        let arr: &GenericArray<u8, U64> = GenericArray::from_slice(bytes);
+        Ok(VerificationSignature(*arr))
     }
 }
-
 
 #[cfg(test)]
 mod tests {

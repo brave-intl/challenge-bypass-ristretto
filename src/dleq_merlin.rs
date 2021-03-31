@@ -54,8 +54,8 @@ impl TranscriptProtocol for Transcript {
 mod tests {
     use super::*;
 
-    use rand::rngs::OsRng;
     use crate::voprf::Token;
+    use rand::rngs::OsRng;
     use sha2::Sha512;
 
     #[test]
@@ -189,8 +189,7 @@ impl DLEQProof {
 
         transcript.dleq_domain_sep();
 
-        let A = (&self.s
-            * &constants::RISTRETTO_BASEPOINT_TABLE)
+        let A = (&self.s * &constants::RISTRETTO_BASEPOINT_TABLE)
             + (self.c
                 * Y.decompress()
                     .ok_or(TokenError(InternalError::PointDecompressionError))?);

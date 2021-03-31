@@ -23,6 +23,7 @@ hmac = "0.10"
 rand = { version = "0.7", default-features = false }
 rand_core = "0.5.1"
 rand_chacha = "0.2.2"
+subtle = { version = "^2.2.1", default-features = false }
 
 [dependencies.base64]
 optional = true
@@ -47,7 +48,7 @@ rand = { version = "0.7", default-features = true }
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
 default = ["std", "u64_backend"]
-std = ["alloc", "curve25519-dalek/std"]
+std = ["alloc", "curve25519-dalek/std", "subtle/std"]
 alloc = ["curve25519-dalek/alloc"]
 u32_backend = ["curve25519-dalek/u32_backend"]
 u64_backend = ["curve25519-dalek/u64_backend"]
