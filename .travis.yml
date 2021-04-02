@@ -10,6 +10,13 @@ matrix:
         - rustup component add clippy
       script:
         - cargo clippy
+    - name: "cargo audit"
+      cache: cargo # cache cargo-audit once installed
+      before_script:
+        - cargo install --force cargo-audit
+        - cargo generate-lockfile
+      script:
+        - cargo audit
     - name: "stable rust + rustfmt"
       rust: stable
       before_script:
