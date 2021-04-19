@@ -1,7 +1,6 @@
 #![no_std]
 #![cfg_attr(all(feature = "alloc", not(feature = "std")), feature(alloc))]
 #![deny(missing_docs)]
-#![cfg_attr(feature = "cargo-clippy", feature(tool_lints))]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::many_single_char_names))]
 #![cfg_attr(feature = "nightly", feature(external_doc))]
 //! [`src/dleq_merlin.rs`]: javascript:void(0)
@@ -28,26 +27,6 @@ extern crate alloc;
 #[cfg(any(test, feature = "std"))]
 #[macro_use]
 extern crate std;
-
-extern crate clear_on_drop;
-extern crate crypto_mac;
-extern crate curve25519_dalek;
-extern crate digest;
-extern crate hmac;
-extern crate rand;
-extern crate rand_chacha;
-
-#[cfg(any(test, feature = "base64"))]
-extern crate base64;
-
-#[cfg(feature = "merlin")]
-extern crate merlin;
-
-#[cfg(feature = "serde")]
-extern crate serde;
-
-#[cfg(test)]
-extern crate sha2;
 
 #[macro_use]
 mod macros;

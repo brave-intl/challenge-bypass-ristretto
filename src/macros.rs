@@ -26,7 +26,7 @@ macro_rules! impl_base64 {
     };
 }
 
-#[cfg(feature = "serde")]
+#[cfg(all(feature = "serde", not(feature = "serde_base64")))]
 #[macro_export]
 /// Implement the Serialize / Deserialize traits for a struct which implements to_bytes / from_bytes
 macro_rules! impl_serde {
@@ -68,6 +68,53 @@ macro_rules! impl_serde {
                     }
                 }
                 deserializer.deserialize_bytes(TVisitor)
+            }
+        }
+    };
+}
+
+#[cfg(feature = "serde_base64")]
+#[macro_export]
+/// Implement the Serialize / Deserialize traits for a struct which implements to_bytes / from_bytes
+macro_rules! impl_serde {
+    ($t:ident) => {
+        impl ::serde::Serialize for $t {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: ::serde::Serializer,
+            {
+                serializer.serialize_str(&self.encode_base64())
+            }
+        }
+
+        impl<'d> ::serde::Deserialize<'d> for $t {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: ::serde::Deserializer<'d>,
+            {
+                use core::fmt::Debug;
+
+                struct TVisitor;
+
+                impl<'d> ::serde::de::Visitor<'d> for TVisitor {
+                    type Value = $t;
+
+                    fn expecting(
+                        &self,
+                        formatter: &mut ::core::fmt::Formatter,
+                    ) -> ::core::fmt::Result {
+                        write!(formatter, "a base64 encoded string: ")?;
+                        $t::bytes_length_error().fmt(formatter)
+                    }
+
+                    fn visit_str<E>(self, s: &str) -> Result<$t, E>
+                    where
+                        E: ::serde::de::Error,
+                    {
+                        $t::decode_base64(s).map_err(::serde::de::Error::custom)
+                    }
+                }
+                deserializer.deserialize_str(TVisitor)
             }
         }
     };

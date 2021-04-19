@@ -15,14 +15,15 @@ use digest::Digest;
 use rand::{CryptoRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
 
-use errors::{InternalError, TokenError};
-use oprf::*;
+use crate::errors::{InternalError, TokenError};
+use crate::oprf::*;
 
 /// The length of a `DLEQProof`, in bytes.
 pub const DLEQ_PROOF_LENGTH: usize = 64;
 
 /// A `DLEQProof` is a proof of the equivalence of the discrete logarithm between two pairs of points.
 #[allow(non_snake_case)]
+#[derive(Debug)]
 pub struct DLEQProof {
     /// `c` is a `Scalar`
     /// \\(c=H_3(X,Y,P,Q,A,B)\\)
@@ -41,12 +42,7 @@ impl_serde!(DLEQProof);
 #[allow(non_snake_case)]
 impl DLEQProof {
     /// Construct a new `DLEQProof`
-    fn _new<D, T>(
-        rng: &mut T,
-        P: RistrettoPoint,
-        Q: RistrettoPoint,
-        k: &SigningKey,
-    ) -> Result<Self, TokenError>
+    fn _new<D, T>(rng: &mut T, P: RistrettoPoint, Q: RistrettoPoint, k: &SigningKey) -> Self
     where
         D: Digest<OutputSize = U64> + Default,
         T: Rng + CryptoRng,
@@ -65,18 +61,18 @@ impl DLEQProof {
         let A = A.compress();
         let B = B.compress();
 
-        h.input(X.as_bytes());
-        h.input(Y.as_bytes());
-        h.input(P.as_bytes());
-        h.input(Q.as_bytes());
-        h.input(A.as_bytes());
-        h.input(B.as_bytes());
+        h.update(X.as_bytes());
+        h.update(Y.as_bytes());
+        h.update(P.as_bytes());
+        h.update(Q.as_bytes());
+        h.update(A.as_bytes());
+        h.update(B.as_bytes());
 
         let c = Scalar::from_hash(h);
 
         let s = t - c * k.k;
 
-        Ok(DLEQProof { c, s })
+        DLEQProof { c, s }
     }
 
     /// Construct a new `DLEQProof`
@@ -90,7 +86,7 @@ impl DLEQProof {
         D: Digest<OutputSize = U64> + Default,
         T: Rng + CryptoRng,
     {
-        Self::_new::<D, T>(
+        Ok(Self::_new::<D, T>(
             rng,
             blinded_token
                 .0
@@ -101,7 +97,7 @@ impl DLEQProof {
                 .decompress()
                 .ok_or(TokenError(InternalError::PointDecompressionError))?,
             k,
-        )
+        ))
     }
 
     /// Verify the `DLEQProof`
@@ -130,12 +126,12 @@ impl DLEQProof {
 
         let mut h = D::default();
 
-        h.input(X.as_bytes());
-        h.input(Y.as_bytes());
-        h.input(P.as_bytes());
-        h.input(Q.as_bytes());
-        h.input(A.as_bytes());
-        h.input(B.as_bytes());
+        h.update(X.as_bytes());
+        h.update(Y.as_bytes());
+        h.update(P.as_bytes());
+        h.update(Q.as_bytes());
+        h.update(A.as_bytes());
+        h.update(B.as_bytes());
 
         let c = Scalar::from_hash(h);
 
@@ -211,6 +207,7 @@ impl DLEQProof {
 /// A `BatchDLEQProof` is a proof of the equivalence of the discrete logarithm between a common
 /// pair of points and one or more other pairs of points.
 #[allow(non_snake_case)]
+#[derive(Debug)]
 pub struct BatchDLEQProof(DLEQProof);
 
 #[cfg(any(test, feature = "base64"))]
@@ -235,15 +232,15 @@ impl BatchDLEQProof {
 
         let mut h = D::default();
 
-        h.input(constants::RISTRETTO_BASEPOINT_COMPRESSED.as_bytes());
-        h.input(public_key.0.as_bytes());
+        h.update(constants::RISTRETTO_BASEPOINT_COMPRESSED.as_bytes());
+        h.update(public_key.0.as_bytes());
 
         for (Pi, Qi) in blinded_tokens.iter().zip(signed_tokens.iter()) {
-            h.input(Pi.0.as_bytes());
-            h.input(Qi.0.as_bytes());
+            h.update(Pi.0.as_bytes());
+            h.update(Qi.0.as_bytes());
         }
 
-        let result = h.result();
+        let result = h.finalize();
 
         let mut seed: [u8; 32] = [0u8; 32];
         seed.copy_from_slice(&result[..32]);
@@ -289,7 +286,7 @@ impl BatchDLEQProof {
             M,
             Z,
             signing_key,
-        )?))
+        )))
     }
 
     /// Verify a `BatchDLEQProof`
@@ -356,16 +353,16 @@ impl BatchDLEQProof {
 #[cfg(test)]
 mod tests {
     use curve25519_dalek::ristretto::CompressedRistretto;
-    use oprf::Token;
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
     use super::*;
+    use crate::oprf::Token;
 
     #[test]
     #[allow(non_snake_case)]
     fn works() {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let key1 = SigningKey::random(&mut rng);
         let key2 = SigningKey::random(&mut rng);
@@ -373,14 +370,14 @@ mod tests {
         let P = RistrettoPoint::random(&mut rng);
         let Q = key1.k * P;
 
-        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1);
 
         assert!(proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
 
         let P = RistrettoPoint::random(&mut rng);
         let Q = key2.k * P;
 
-        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1).unwrap();
+        let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1);
 
         assert!(!proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
     }
@@ -412,10 +409,10 @@ mod tests {
 
             assert_eq!(base64::encode(&Q.compress().to_bytes()[..]), Q_b64);
 
-            let mut seed: [u8; 32] = [0u8; 32];
+            let seed: [u8; 32] = [0u8; 32];
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
 
-            let dleq = DLEQProof::_new::<Sha512, _>(&mut prng, P, Q, &server_key).unwrap();
+            let dleq = DLEQProof::_new::<Sha512, _>(&mut prng, P, Q, &server_key);
             assert_eq!(dleq.encode_base64(), dleq_b64);
 
             assert!(dleq._verify::<Sha512>(P, Q, &server_key.public_key).is_ok());
@@ -465,7 +462,7 @@ mod tests {
             assert_eq!(base64::encode(&M.compress().to_bytes()[..]), M_b64);
             assert_eq!(base64::encode(&Z.compress().to_bytes()[..]), Z_b64);
 
-            let mut seed: [u8; 32] = [0u8; 32];
+            let seed: [u8; 32] = [0u8; 32];
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
 
             let batch_proof =
@@ -483,7 +480,7 @@ mod tests {
     fn batch_works() {
         use std::vec::Vec;
 
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let key = SigningKey::random(&mut rng);
 

@@ -1,27 +1,34 @@
 extern crate challenge_bypass_ristretto;
 extern crate hmac;
 extern crate rand;
+extern crate serde;
 extern crate sha2;
 
 use hmac::Hmac;
 use rand::rngs::OsRng;
 use sha2::Sha512;
 
+#[cfg(feature = "serde_base64")]
+use serde::{Deserialize, Serialize};
+
 use challenge_bypass_ristretto::errors::*;
 use challenge_bypass_ristretto::voprf::*;
 
 type HmacSha512 = Hmac<Sha512>;
 
+#[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
 struct SigningRequest {
     blinded_tokens: Vec<BlindedToken>,
 }
 
+#[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
 struct SigningResponse {
     signed_tokens: Vec<SignedToken>,
     public_key: PublicKey,
     batch_proof: BatchDLEQProof,
 }
 
+#[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
 struct RedeemRequest {
     preimages: Vec<TokenPreimage>,
     verification_signatures: Vec<VerificationSignature>,
@@ -34,9 +41,10 @@ struct Client {
     unblinded_tokens: Vec<UnblindedToken>,
 }
 
+#[cfg(not(feature = "merlin"))]
 impl Client {
     fn create_tokens(&mut self, n: u8) -> SigningRequest {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         for _i in 0..n {
             // client prepares a random token and blinding scalar
@@ -98,9 +106,10 @@ struct Server {
     spent_tokens: Vec<TokenPreimage>,
 }
 
+#[cfg(not(feature = "merlin"))]
 impl Server {
     fn sign_tokens(&self, req: SigningRequest) -> SigningResponse {
-        let mut rng = OsRng::new().unwrap();
+        let mut rng = OsRng;
 
         let public_key = self.signing_key.public_key;
 
@@ -149,8 +158,9 @@ impl Server {
 }
 
 #[test]
+#[cfg(not(feature = "merlin"))]
 fn e2e_works() {
-    let mut rng = OsRng::new().unwrap();
+    let mut rng = OsRng;
     let signing_key = SigningKey::random(&mut rng);
 
     let mut client = Client {
@@ -169,5 +179,44 @@ fn e2e_works() {
     client.store_signed_tokens(signing_resp).unwrap();
 
     let redeem_request = client.redeem_tokens();
+    server.redeem_tokens(&redeem_request);
+}
+
+#[cfg(feature = "serde_base64")]
+#[test]
+fn e2e_serde_works() {
+    let mut rng = OsRng;
+    let signing_key = SigningKey::random(&mut rng);
+
+    let mut client = Client {
+        tokens: Vec::new(),
+        blinded_tokens: Vec::new(),
+        unblinded_tokens: Vec::new(),
+    };
+    let mut server = Server {
+        signing_key,
+        spent_tokens: Vec::new(),
+    };
+
+    let signing_req = client.create_tokens(10);
+
+    // serde roundtrip
+    let signing_req = serde_json::to_string(&signing_req).unwrap();
+    let signing_req: SigningRequest = serde_json::from_str(&signing_req).unwrap();
+
+    let signing_resp = server.sign_tokens(signing_req);
+
+    // serde roundtrip
+    let signing_resp = serde_json::to_string(&signing_resp).unwrap();
+    let signing_resp: SigningResponse = serde_json::from_str(&signing_resp).unwrap();
+
+    client.store_signed_tokens(signing_resp).unwrap();
+
+    let redeem_request = client.redeem_tokens();
+
+    // serde roundtrip
+    let redeem_request = serde_json::to_string(&redeem_request).unwrap();
+    let redeem_request: RedeemRequest = serde_json::from_str(&redeem_request).unwrap();
+
     server.redeem_tokens(&redeem_request);
 }

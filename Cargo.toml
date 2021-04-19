@@ -1,7 +1,8 @@
 [package]
 authors = ["eV <ev@7pr.xyz>"]
+edition = "2018"
 name = "challenge-bypass-ristretto"
-version = "1.0.0-pre.0"
+version = "1.0.0"
 readme = "README.md"
 license = "MPL-2.0"
 repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
@@ -14,17 +15,19 @@ exclude = [
 ]
 
 [dependencies]
-clear_on_drop = "0.2.3"
-crypto-mac = "0.7"
-curve25519-dalek = { version = "1", default-features = false }
-digest = "0.8"
-hmac = "0.7"
-rand = { version = "0.6.0", default-features = false }
-rand_chacha = "0.1.0"
+clear_on_drop = "0.2"
+crypto-mac = "0.10"
+curve25519-dalek = { version = "3", default-features = false }
+digest = "0.9"
+hmac = "0.10"
+rand = { version = "0.7", default-features = false }
+rand_core = "0.5.1"
+rand_chacha = "0.2.2"
+subtle = { version = "^2.2.1", default-features = false }
 
 [dependencies.base64]
 optional = true
-version = "0.9.3"
+version = "0.13"
 
 [dependencies.serde]
 optional = true
@@ -33,21 +36,24 @@ default-features = false
 
 [dependencies.merlin]
 optional = true
-version = "1"
+version = "2"
 
 [dev-dependencies]
-sha2 = "0.8"
-base64 = "0.9.3"
-rand = { version = "0.6.0", default-features = true }
+serde_json = "1.0"
+serde = { version = "^1.0.0", features = ["derive"] }
+sha2 = "0.9"
+base64 = "0.13"
+rand = { version = "0.7", default-features = true }
 
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
 default = ["std", "u64_backend"]
-std = ["alloc", "curve25519-dalek/std"]
+std = ["alloc", "curve25519-dalek/std", "subtle/std"]
 alloc = ["curve25519-dalek/alloc"]
 u32_backend = ["curve25519-dalek/u32_backend"]
 u64_backend = ["curve25519-dalek/u64_backend"]
 avx2_backend = ["curve25519-dalek/avx2_backend"]
+serde_base64 = ["serde", "base64"]
 
 [package.metadata.docs.rs]
 features = ["nightly"]
