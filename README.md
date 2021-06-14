@@ -64,6 +64,10 @@ server marks the token as spent so it cannot be used again.
 ## Example Usage
 See [`tests/e2e.rs`].
 
+## Benchmarks
+
+Run `cargo bench`
+
 ## Security Contract
 
 This software attempts to ensure the following:

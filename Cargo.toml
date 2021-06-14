@@ -44,6 +44,7 @@ serde = { version = "^1.0.0", features = ["derive"] }
 sha2 = "0.9"
 base64 = "0.13"
 rand = { version = "0.7", default-features = true }
+criterion = { version = "0.3.4", features = ["html_reports"] }
 
 [features]
 nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
@@ -62,3 +63,7 @@ rustdoc-args = [
     "--html-in-header",
     "./rustdoc-include-katex-header.html",
 ]
+
+[[bench]]
+name = "benchmarks"
+harness = false
