@@ -2,7 +2,6 @@
 #![cfg_attr(all(feature = "alloc", not(feature = "std")), feature(alloc))]
 #![deny(missing_docs)]
 #![cfg_attr(feature = "cargo-clippy", allow(clippy::many_single_char_names))]
-#![cfg_attr(feature = "nightly", feature(external_doc))]
 //! [`src/dleq_merlin.rs`]: javascript:void(0)
 //! [`tests/e2e.rs`]: javascript:void(0)
 //! [a more detailed writeup is also available]: #cryptographic-protocol
