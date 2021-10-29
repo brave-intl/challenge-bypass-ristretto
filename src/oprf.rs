@@ -81,7 +81,7 @@ impl TokenPreimage {
         }
 
         let mut bits: [u8; TOKEN_PREIMAGE_LENGTH] = [0u8; TOKEN_PREIMAGE_LENGTH];
-        bits.copy_from_slice(&bytes);
+        bits.copy_from_slice(bytes);
         Ok(TokenPreimage(bits))
     }
 }
@@ -134,7 +134,7 @@ impl Token {
         let mut hash = D::default();
         let mut seed = [0u8; 64];
         hash.update(bytes);
-        seed.copy_from_slice(&hash.finalize().as_slice());
+        seed.copy_from_slice(hash.finalize().as_slice());
 
         Token {
             t: TokenPreimage(seed),
@@ -455,7 +455,7 @@ impl UnblindedToken {
 
         let output = hash.finalize();
         let mut output_bytes = [0u8; 64];
-        output_bytes.copy_from_slice(&output.as_slice());
+        output_bytes.copy_from_slice(output.as_slice());
 
         VerificationKey(output_bytes)
     }
