@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goversion:
+        toolchain:
         - stable
         - nightly
     steps:

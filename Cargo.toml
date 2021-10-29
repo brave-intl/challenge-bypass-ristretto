@@ -67,3 +67,4 @@ rustdoc-args = [
 [[bench]]
 name = "benchmarks"
 harness = false
+
