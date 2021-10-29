@@ -2,12 +2,9 @@ on:
   push:
     branches:
       - master
-      - prod
-      - dev
   pull_request:
     branches:
       - master
-      - prod
 
 name: Clippy check
 jobs:
