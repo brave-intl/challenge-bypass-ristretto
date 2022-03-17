@@ -1,6 +1,5 @@
 use core::fmt::Debug;
 
-use clear_on_drop::clear::Clear;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
@@ -10,6 +9,7 @@ use hmac::digest::generic_array::GenericArray;
 use hmac::{Mac, NewMac};
 use rand::{CryptoRng, Rng};
 use subtle::{Choice, ConstantTimeEq};
+use zeroize::Zeroize;
 
 use crate::errors::{InternalError, TokenError};
 
@@ -102,7 +102,7 @@ pub struct Token {
 /// Overwrite the token blinding factor with null when it goes out of scope.
 impl Drop for Token {
     fn drop(&mut self) {
-        self.r.clear();
+        self.r.zeroize();
     }
 }
 
@@ -310,7 +310,7 @@ impl_serde!(SigningKey);
 /// Overwrite signing key with null when it goes out of scope.
 impl Drop for SigningKey {
     fn drop(&mut self) {
-        self.k.clear();
+        self.k.zeroize();
     }
 }
 

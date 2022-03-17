@@ -15,7 +15,6 @@ exclude = [
 ]
 
 [dependencies]
-clear_on_drop = "0.2"
 crypto-mac = "0.10"
 curve25519-dalek = { version = "3", default-features = false }
 digest = "0.9"
@@ -23,7 +22,8 @@ hmac = "0.10"
 rand = { version = "0.7", default-features = false }
 rand_core = "0.5.1"
 rand_chacha = "0.2.2"
-subtle = { version = "^2.2.1", default-features = false }
+subtle = { version = "^2.2", default-features = false }
+zeroize = "1.5.4"
 
 [dependencies.base64]
 optional = true
@@ -47,7 +47,7 @@ rand = { version = "0.7", default-features = true }
 criterion = { version = "0.3.4", features = ["html_reports"] }
 
 [features]
-nightly = ["clear_on_drop/nightly", "curve25519-dalek/nightly"]
+nightly = ["curve25519-dalek/nightly"]
 default = ["std", "u64_backend"]
 std = ["alloc", "curve25519-dalek/std", "subtle/std"]
 alloc = ["curve25519-dalek/alloc"]
