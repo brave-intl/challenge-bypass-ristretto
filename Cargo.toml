@@ -8,7 +8,6 @@ license = "MPL-2.0"
 repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
 documentation = "https://docs.rs/challenge-bypass-ristretto"
 description = "A rust implemention of the privacy pass cryptographic protocol using the Ristretto group (WIP)"
-
 exclude = [
     ".gitignore",
     ".travis.yml",
@@ -45,6 +44,11 @@ sha2 = "0.9"
 base64 = "0.13"
 rand = { version = "0.7", default-features = true }
 criterion = { version = "0.3.4", features = ["html_reports"] }
+
+# TODO fix this and/or branch to save and use the static file in docker instead
+[lib]
+name = "challenge_bypass_staticlib"
+crate-type = ["staticlib"]
 
 [features]
 nightly = ["curve25519-dalek/nightly"]
