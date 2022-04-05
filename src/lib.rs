@@ -17,8 +17,8 @@
 //! [`VerificationSignature`]: voprf/struct.VerificationSignature.html
 //! [`DLEQProof`]: voprf/struct.DLEQProof.html
 //! [`BatchDLEQProof`]: voprf/struct.BatchDLEQProof.html
-#![cfg_attr(feature = "nightly", doc(include = "../README.md"))]
-#![cfg_attr(feature = "nightly", doc(include = "../docs/PROTOCOL.md"))]
+#![doc = include_str!("../README.md")]
+#![doc = include_str!("../docs/PROTOCOL.md")]
 
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 extern crate alloc;
