@@ -14,36 +14,154 @@ use challenge_bypass_ristretto::errors::*;
 type HmacSha512 = Hmac<Sha512>;
 
 pub fn e2e_server_benchmarks(c: &mut Criterion) {
-    let mut rng = OsRng;
-    let signing_key = SigningKey::random(&mut rng);
-    let n_tokens = 30;
+    for n_tokens in [1, 10, 100, 1000] {
+        c.bench_function(
+            &format!("client create tokens, batch size: {}", n_tokens),
+            |b| {
+                b.iter_batched(
+                    || Client {
+                        tokens: Vec::new(),
+                        blinded_tokens: Vec::new(),
+                        unblinded_tokens: Vec::new(),
+                    },
+                    |mut client| {
+                        client.create_tokens(n_tokens);
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
 
-    let mut client = Client {
-        tokens: Vec::new(),
-        blinded_tokens: Vec::new(),
-        unblinded_tokens: Vec::new(),
-    };
+        c.bench_function(
+            &format!("server sign pre-tokens, batch size: {}", n_tokens),
+            |b| {
+                b.iter_batched(
+                    || {
+                        let mut rng = OsRng;
+                        let signing_key = SigningKey::random(&mut rng);
 
-    let mut server = Server {
-        signing_key,
-        spent_tokens: Vec::new(),
-    };
+                        let mut client = Client {
+                            tokens: Vec::new(),
+                            blinded_tokens: Vec::new(),
+                            unblinded_tokens: Vec::new(),
+                        };
+                        let server = Server {
+                            signing_key,
+                            spent_tokens: Vec::new(),
+                        };
 
-    let signing_req = client.create_tokens(n_tokens);
+                        let signing_req = client.create_tokens(n_tokens);
+                        (server, signing_req)
+                    },
+                    |(server, signing_req)| {
+                        server.sign_tokens(signing_req);
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
 
-    c.bench_function("sing pre-tokens", |b| {
-        b.iter(|| {
-            let _signing_resp = server.sign_tokens(signing_req.clone());
-        });
-    });
+        c.bench_function(
+            &format!("client  unblind & verify tokens, batch size: {}", n_tokens),
+            |b| {
+                b.iter_batched(
+                    || {
+                        let mut rng = OsRng;
+                        let signing_key = SigningKey::random(&mut rng);
 
-    let redeem_request = client.redeem_tokens();
+                        let mut client = Client {
+                            tokens: Vec::new(),
+                            blinded_tokens: Vec::new(),
+                            unblinded_tokens: Vec::new(),
+                        };
+                        let server = Server {
+                            signing_key,
+                            spent_tokens: Vec::new(),
+                        };
 
-    c.bench_function("redeem tokens", |b| {
-        b.iter(|| {
-            server.redeem_tokens(&redeem_request);
-        });
-    });
+                        let signing_req = client.create_tokens(n_tokens);
+
+                        let signing_res = server.sign_tokens(signing_req);
+
+                        (client, signing_res)
+                    },
+                    |(mut client, signing_res)| {
+                        client
+                            .store_signed_tokens(signing_res)
+                            .expect("Could not store tokens.");
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
+
+        c.bench_function(
+            &format!("client redeem tokens, batch size: {}", n_tokens),
+            |b| {
+                b.iter_batched(
+                    || {
+                        let mut rng = OsRng;
+                        let signing_key = SigningKey::random(&mut rng);
+
+                        let mut client = Client {
+                            tokens: Vec::new(),
+                            blinded_tokens: Vec::new(),
+                            unblinded_tokens: Vec::new(),
+                        };
+                        let server = Server {
+                            signing_key,
+                            spent_tokens: Vec::new(),
+                        };
+
+                        let signing_req = client.create_tokens(n_tokens);
+
+                        let signing_resp = server.sign_tokens(signing_req);
+                        client.store_signed_tokens(signing_resp).unwrap();
+
+                        client
+                    },
+                    |client| {
+                        client.redeem_tokens();
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
+
+        c.bench_function(
+            &format!("server redeem tokens, batch size: {}", n_tokens),
+            |b| {
+                b.iter_batched(
+                    || {
+                        let mut rng = OsRng;
+                        let signing_key = SigningKey::random(&mut rng);
+
+                        let mut client = Client {
+                            tokens: Vec::new(),
+                            blinded_tokens: Vec::new(),
+                            unblinded_tokens: Vec::new(),
+                        };
+                        let server = Server {
+                            signing_key,
+                            spent_tokens: Vec::new(),
+                        };
+
+                        let signing_req = client.create_tokens(n_tokens);
+
+                        let signing_resp = server.sign_tokens(signing_req);
+                        client.store_signed_tokens(signing_resp).unwrap();
+
+                        let redeem_request = client.redeem_tokens();
+                        (server, redeem_request)
+                    },
+                    |(mut server, redeem_request)| {
+                        server.redeem_tokens(&redeem_request);
+                    },
+                    criterion::BatchSize::SmallInput,
+                );
+            },
+        );
+    }
 }
 
 #[cfg_attr(feature = "serde_base64", derive(Serialize, Deserialize))]
@@ -74,10 +192,10 @@ struct Client {
 
 #[cfg(not(feature = "merlin"))]
 impl Client {
-    fn create_tokens(&mut self, n: u8) -> SigningRequest {
+    fn create_tokens(&mut self, n: usize) -> SigningRequest {
         let mut rng = OsRng;
 
-        for _i in 0..n {
+        for _ in 0..n {
             // client prepares a random token and blinding scalar
             let token = Token::random::<Sha512, OsRng>(&mut rng);
 
