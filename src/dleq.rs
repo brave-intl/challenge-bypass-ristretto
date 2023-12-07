@@ -379,7 +379,7 @@ mod tests {
 
         let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1);
 
-        assert!(!proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
+        assert!(proof._verify::<Sha512>(P, Q, &key1.public_key).is_err());
     }
 
     #[allow(non_snake_case)]
