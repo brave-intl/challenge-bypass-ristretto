@@ -632,7 +632,7 @@ mod tests {
             W_bits.copy_from_slice(&W_bytes[..32]);
             let W = CompressedRistretto(W_bits);
 
-            let unblinded_token_expected = UnblindedToken { W: W, t: token.t };
+            let unblinded_token_expected = UnblindedToken { W, t: token.t };
             assert!(unblinded_token.encode_base64() == unblinded_token_expected.encode_base64());
         }
     }
