@@ -582,8 +582,6 @@ mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
-    use base64;
-
     use super::*;
     type HmacSha512 = Hmac<Sha512>;
 
