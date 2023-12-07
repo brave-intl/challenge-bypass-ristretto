@@ -99,10 +99,6 @@ The optional features include `base64` and `serde`.
 * `base64` exposes methods for base64 encoding / decoding of the various structures.
 * `serde` implements the [serde](https://serde.rs) `Serialize` / `Deserialize` traits.
 
-`merlin` is an experimental feature that uses [merlin](https://github.com/dalek-cryptography/merlin) to implement the DLEQ proofs. This diverges from
-the original protocol specified in the privacy pass paper. It is not yet stable / intended for use and
-is implemented in [`src/dleq_merlin.rs`].
-
 # Development
 
 Install rust.
@@ -115,6 +111,5 @@ Run `cargo build`
 
 Run `cargo test`
 
-[`src/dleq_merlin.rs`]: src/dleq_merlin.rs
 [`tests/e2e.rs`]: tests/e2e.rs
 [a more detailed writeup is also available]: https://docs.rs/challenge-bypass-ristretto#cryptographic-protocol

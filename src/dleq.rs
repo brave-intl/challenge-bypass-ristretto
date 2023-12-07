@@ -1,7 +1,7 @@
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
 
-#[cfg(all(feature = "std"))]
+#[cfg(feature = "std")]
 use std::vec::Vec;
 
 use core::iter;
@@ -49,7 +49,7 @@ impl DLEQProof {
     {
         let t = Scalar::random(rng);
 
-        let A = &t * &constants::RISTRETTO_BASEPOINT_TABLE;
+        let A = t * constants::RISTRETTO_BASEPOINT_POINT;
         let B = t * P;
 
         let mut h = D::default();
@@ -113,7 +113,7 @@ impl DLEQProof {
         let X = constants::RISTRETTO_BASEPOINT_COMPRESSED;
         let Y = public_key.0;
 
-        let A = (&self.s * &constants::RISTRETTO_BASEPOINT_TABLE)
+        let A = (self.s * constants::RISTRETTO_BASEPOINT_POINT)
             + (self.c
                 * Y.decompress()
                     .ok_or(TokenError(InternalError::PointDecompressionError))?);
@@ -195,9 +195,9 @@ impl DLEQProof {
         c_bits.copy_from_slice(&bytes[..32]);
         s_bits.copy_from_slice(&bytes[32..]);
 
-        let c = Scalar::from_canonical_bytes(c_bits)
+        let c = Option::from(Scalar::from_canonical_bytes(c_bits))
             .ok_or(TokenError(InternalError::ScalarFormatError))?;
-        let s = Scalar::from_canonical_bytes(s_bits)
+        let s = Option::from(Scalar::from_canonical_bytes(s_bits))
             .ok_or(TokenError(InternalError::ScalarFormatError))?;
 
         Ok(DLEQProof { c, s })
