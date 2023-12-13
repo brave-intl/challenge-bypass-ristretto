@@ -31,7 +31,7 @@ pub fn e2e_server_benchmarks(c: &mut Criterion) {
 
     let signing_req = client.create_tokens(n_tokens);
 
-    c.bench_function("sing pre-tokens", |b| {
+    c.bench_function("sign pre-tokens", |b| {
         b.iter(|| {
             let _signing_resp = server.sign_tokens(signing_req.clone());
         });
