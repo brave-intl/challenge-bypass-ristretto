@@ -379,7 +379,7 @@ mod tests {
 
         let proof = DLEQProof::_new::<Sha512, _>(&mut rng, P, Q, &key1);
 
-        assert!(!proof._verify::<Sha512>(P, Q, &key1.public_key).is_ok());
+        assert!(proof._verify::<Sha512>(P, Q, &key1.public_key).is_err());
     }
 
     #[allow(non_snake_case)]
@@ -393,8 +393,7 @@ mod tests {
 ("tviSLm/W8oFds67y9lMs990fjh08hQNV17/4V2bmOQY=", "5ufRlCvVKvXp1yuxxS7Jvw9LSwQUl6Q/MlT6HY2l1Hc=", "zOVEbK4KQ1GBW97YUVNguoN+NntwtGi1t+EeioMusXY=", "lH2gNbwqSC1nYYxT3I7fNQagTsD4OvSbzwrSCpanQkQ=", "NJF9U3TWiCWMd6Qh/vA90F/2N6udsXbTvifNxf0rzgbhInoEvYDi5jZAZUQEi7x7mmP8iFq7+ukoOroy6/8jCw=="),
 ("Ge3prZ2jJSoh1A3ZvrSfaSA1kDziGW2I+Gmh6jniaAs=", "2nNCd5YN9H5EYlOL9/kmLYNBMkaLwnG3wjyd7jw2QAY=", "YHdAzlpSTAMy3mB+F4mPwlyVl+V9Yt4f3cDPNJpWdns=", "gEnqgXg3FDaCQFayTXrIfpbZ2n0P6FD/95LuMsdIfFk=", "Fj2/YunbQs5XxSyLxl/fC4dAfRlErGurTtHHSfGKyQTzrLZrO7VghmGFQaMAXZ+jg+6v99YL6FWj1Y/5WFt2Aw=="),
         ];
-        for i in 0..vectors.len() {
-            let (k, Y, P, Q_b64, dleq_b64) = vectors[i];
+        for (k, Y, P, Q_b64, dleq_b64) in vectors {
 
             let server_key = SigningKey::decode_base64(k).unwrap();
 
@@ -430,8 +429,7 @@ mod tests {
 ("siv+BM3AvP8Jv1aL4MFhMs9Xa6jxUNhFXpTWDfGrZQQ=", "XgFOlHEz5zm5dtx6ptYIXNg1NsJ/3vAq+cf/9eBkbxI=", "dsaMl4/9FcOFtaW3l65y1Z9ETJR36aTcXPMp+w4HGUY=,aH2q1HiReMA/Ney2NNZCgl+5GKK9xrxVwdC+THq9pFY=,uGRqS51VD7DuK0gSpMb3owRld57W6DqOyZpygXJVpmI=,Bvv+lqtCg39SD1H218rPZdQTmYPe2HD3QScntqw1oFA=,9IHWUyv/SCwZ4WKEGi58+bQ5nHsaDBXCku2vOzGvgUY=", "4lPV/OyNjVy4VTUvaROxCuq4ryfegkt7jt5IhrX9THo=,4EAmV5Mv3a/IQFsfVlaFxErNc96Ns980FT4yLlCdoxA=,bgGM37uBMLdRRAd1cu/4Iq+FzFwzRFLVhqp2uGFnPQc=,rCn4OuWnV5tTsgcPJAYRSqfONZf9k/92fwzWHtUxxh8=,lHCDzazDlU0w735u7OQmJM96WGeaNFILanawmC9EwFE=", "jotItTWLW/kpDeh8KJQtNqM7ON0YibEJ7R8VnMHP7Cs=", "Pu49xb3Ixn+Dfg6s+wgjyoPy7ickB5lM7/MxQVdpaUI=", "N6vDmGbYZ0aa9S2JqWSYppiX1AV33QDXGc8FHaF0aQ9y6Hp68UEkI2x5AJQ3URqS+5/x1AuucMH0AOMcLNqODg=="),
 ("jTTf/D0gicaG++cQJ1X4qYaOqk4YPo0p6Mo2B95kJAg=", "LCtewONuYTXljy+oK73/m7CON/vr/e1r4aDaVE3xDnc=", "GsomH3aBo6qBHaNGzZZ/pNOviBTbZrUfpthgYU5jAmU=,wHvznjZDA9L8dgQGEj7wf1/QGxunE5/WYdxUpQX4Umc=,ZMxkDV7epUgmpix38jBfWv42VeMQefypY56dnysikWA=,aEy+/J0AFmjYGTjcv5y942fleEk/0rwqlD+kXSn0vCM=,QJMHfIYUraWdJKzenROtgLyjU9MrDtDDwFfDNIcjCHA=", "aGUXY5bBYoDmw4x1muwHzKp1w2sITQMeDfsyxv9EUDc=,qh0wfC/wAdclIJ79R+IIpPJLJM5aBe/i5i54dQOn3Vk=,zCi7XaHyO/b9SfN2AYuJcC60zqnIorkXMjjbixhEKxk=,XlBf7DyH5FtcUyr9Gfnj8i3cnKKPtWGHXm/LpIQX4gM=,wHtZg2i40wdxQvHehZEunTHiODSuEMv8suwFaqynmTQ=", "osUDqpps33Jw0k7vEHFCAk+iywlE7YrXrX5RfqC0olA=", "LnD9wlZrDo3v6dw56owm6NazoBLKwtqMPWdtxSRVWxc=", "KVEotBgIaz5Rymqpy4paroHGQyD/80FdvLCrONxDzQUWgNZxZ6aiCJ2VxIGP+6+86FZXS1sXGgs3dwft/VMCCw=="),
         ];
-        for i in 0..vectors.len() {
-            let (k, Y, P, Q, M_b64, Z_b64, dleq_b64) = vectors[i];
+        for (k, Y, P, Q, M_b64, Z_b64, dleq_b64) in vectors {
 
             let server_key = SigningKey::decode_base64(k).unwrap();
 

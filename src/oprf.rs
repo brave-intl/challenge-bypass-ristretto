@@ -582,8 +582,6 @@ mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
-    use base64;
-
     use super::*;
     type HmacSha512 = Hmac<Sha512>;
 
@@ -603,8 +601,7 @@ mod tests {
             ("N8oRiMuSrYdp9TMKp++AP8ridXqdX6BoPOucx2eRCQE=", "mnikks9ySHzZGMgoPZ0SRA8/JJkMh5aA+m3eqeMfqTE=", "9sNH3G618rH0vy3TKBMNRQDKOb66LUKBo9jOtMsezeN4sgAp+2pMVDMS5BATkVxXAW5dpoGUTMJ3+cfnX0plSg==", "f44zH9r/YnCyaHZnKtEc/68diotEo1GjQ5MWepNEXAk=", "EEH0FTbmxN5XoXnAHmIH0y4VjcixJ5U9T8WqXgP2IAg=", "Km0KASMeIqj0s5vswz+WEYptTx2Y0fOb9cVjb+UKexw=", "lNDdKND+R/JmDrM08Q7w7ePoXT7/hgzGU6xVBU5RFig="),
             ("Nye8fMOQJv1HjCY6qxG0Br661wjd8OwNI1O0ZbkmGAc=", "5szoRS3/9jdVTmhswiS9yyaLeC2I0CfBAUzfe0zGjz8=", "OkOqxU+boJmNIhmzusoRGUDVJLfPlGd9bFV3UPpNueEHfu21um4zwQSuJUQ8hr8VgzU63fb93Rmk/0kRiOPUhw==", "ZBztTnJvQKmPkxfgzGzufhRa6o4oUPublpOIhODHKA4=", "lD1eLLmRw7ebLOd51OQSps51cZGTIg2DM+GL38bQQww=", "qA27hu9S60UX0jfnWJQgUBllQvfOPu+jQVkphi6Sv24=", "HhPZFQiNAYzG+niNmUiWut2g/YMhox86h1XyZypQfVk="),
         ];
-        for i in 0..vectors.len() {
-            let (k, Y, seed, r, P, Q, W) = vectors[i];
+        for (k, Y, seed, r, P, Q, W) in vectors {
 
             let server_key = SigningKey::decode_base64(k).unwrap();
             let seed = base64::decode(seed).unwrap();
@@ -633,7 +630,7 @@ mod tests {
             W_bits.copy_from_slice(&W_bytes[..32]);
             let W = CompressedRistretto(W_bits);
 
-            let unblinded_token_expected = UnblindedToken { W: W, t: token.t };
+            let unblinded_token_expected = UnblindedToken { W, t: token.t };
             assert!(unblinded_token.encode_base64() == unblinded_token_expected.encode_base64());
         }
     }
