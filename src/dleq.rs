@@ -394,7 +394,6 @@ mod tests {
 ("Ge3prZ2jJSoh1A3ZvrSfaSA1kDziGW2I+Gmh6jniaAs=", "2nNCd5YN9H5EYlOL9/kmLYNBMkaLwnG3wjyd7jw2QAY=", "YHdAzlpSTAMy3mB+F4mPwlyVl+V9Yt4f3cDPNJpWdns=", "gEnqgXg3FDaCQFayTXrIfpbZ2n0P6FD/95LuMsdIfFk=", "Fj2/YunbQs5XxSyLxl/fC4dAfRlErGurTtHHSfGKyQTzrLZrO7VghmGFQaMAXZ+jg+6v99YL6FWj1Y/5WFt2Aw=="),
         ];
         for (k, Y, P, Q_b64, dleq_b64) in vectors {
-
             let server_key = SigningKey::decode_base64(k).unwrap();
 
             assert_eq!(server_key.public_key.encode_base64(), Y);
@@ -430,7 +429,6 @@ mod tests {
 ("jTTf/D0gicaG++cQJ1X4qYaOqk4YPo0p6Mo2B95kJAg=", "LCtewONuYTXljy+oK73/m7CON/vr/e1r4aDaVE3xDnc=", "GsomH3aBo6qBHaNGzZZ/pNOviBTbZrUfpthgYU5jAmU=,wHvznjZDA9L8dgQGEj7wf1/QGxunE5/WYdxUpQX4Umc=,ZMxkDV7epUgmpix38jBfWv42VeMQefypY56dnysikWA=,aEy+/J0AFmjYGTjcv5y942fleEk/0rwqlD+kXSn0vCM=,QJMHfIYUraWdJKzenROtgLyjU9MrDtDDwFfDNIcjCHA=", "aGUXY5bBYoDmw4x1muwHzKp1w2sITQMeDfsyxv9EUDc=,qh0wfC/wAdclIJ79R+IIpPJLJM5aBe/i5i54dQOn3Vk=,zCi7XaHyO/b9SfN2AYuJcC60zqnIorkXMjjbixhEKxk=,XlBf7DyH5FtcUyr9Gfnj8i3cnKKPtWGHXm/LpIQX4gM=,wHtZg2i40wdxQvHehZEunTHiODSuEMv8suwFaqynmTQ=", "osUDqpps33Jw0k7vEHFCAk+iywlE7YrXrX5RfqC0olA=", "LnD9wlZrDo3v6dw56owm6NazoBLKwtqMPWdtxSRVWxc=", "KVEotBgIaz5Rymqpy4paroHGQyD/80FdvLCrONxDzQUWgNZxZ6aiCJ2VxIGP+6+86FZXS1sXGgs3dwft/VMCCw=="),
         ];
         for (k, Y, P, Q, M_b64, Z_b64, dleq_b64) in vectors {
-
             let server_key = SigningKey::decode_base64(k).unwrap();
 
             assert_eq!(server_key.public_key.encode_base64(), Y);
