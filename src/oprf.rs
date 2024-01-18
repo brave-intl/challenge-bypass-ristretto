@@ -91,7 +91,7 @@ impl TokenPreimage {
 /// Since a token includes the blinding factor it should be treated
 /// as a client secret and NEVER revealed to the server.
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     /// `t` is a `TokenPreimage`
     pub(crate) t: TokenPreimage,
@@ -293,7 +293,7 @@ impl PublicKey {
 ///
 /// This is a server secret and should NEVER be revealed to the client.
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SigningKey {
     /// A `PublicKey` showing a committment to this particular key
     pub public_key: PublicKey,
@@ -425,7 +425,7 @@ impl SignedToken {
 /// it should nevertheless not be sent between the two.
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[allow(non_snake_case)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnblindedToken {
     /// `t` is the `TokenPreimage`
     pub t: TokenPreimage,
@@ -497,6 +497,7 @@ impl UnblindedToken {
 ///
 /// \\(K = H_2(t, W)\\)
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
+#[derive(Clone)]
 pub struct VerificationKey([u8; 64]);
 
 impl Debug for VerificationKey {
@@ -529,6 +530,7 @@ impl VerificationKey {
 
 /// A `VerificationSignature` which can be verified given the `VerificationKey` and message
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
+#[derive(Clone)]
 pub struct VerificationSignature(GenericArray<u8, U64>);
 
 #[cfg(any(test, feature = "base64"))]
