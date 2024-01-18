@@ -1,7 +1,7 @@
 #[cfg(all(feature = "alloc", not(feature = "std")))]
 use alloc::vec::Vec;
 
-#[cfg(all(feature = "std"))]
+#[cfg(feature = "std")]
 use std::vec::Vec;
 
 use core::iter;
