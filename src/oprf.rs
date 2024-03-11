@@ -4,9 +4,9 @@ use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use digest::generic_array::typenum::U64;
-use digest::Digest;
+use digest::{Digest, KeyInit};
 use hmac::digest::generic_array::GenericArray;
-use hmac::{Mac, NewMac};
+use hmac::Mac;
 use rand::{CryptoRng, Rng};
 use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
@@ -198,7 +198,7 @@ impl Token {
 
         let mut blinding_factor_bits: [u8; 32] = [0u8; 32];
         blinding_factor_bits.copy_from_slice(&bytes[TOKEN_PREIMAGE_LENGTH..]);
-        let blinding_factor = Scalar::from_canonical_bytes(blinding_factor_bits)
+        let blinding_factor = Option::from(Scalar::from_canonical_bytes(blinding_factor_bits))
             .ok_or(TokenError(InternalError::ScalarFormatError))?;
 
         Ok(Token {
@@ -319,7 +319,7 @@ impl SigningKey {
     /// Generates a new random `SigningKey` using the provided random number generator.
     pub fn random<T: Rng + CryptoRng>(rng: &mut T) -> Self {
         let k = Scalar::random(rng);
-        let Y = &k * &constants::RISTRETTO_BASEPOINT_TABLE;
+        let Y = k * constants::RISTRETTO_BASEPOINT_POINT;
         SigningKey {
             k,
             public_key: PublicKey(Y.compress()),
@@ -369,10 +369,10 @@ impl SigningKey {
 
         let mut bits: [u8; 32] = [0u8; 32];
         bits.copy_from_slice(&bytes[..32]);
-        let k = Scalar::from_canonical_bytes(bits)
+        let k = Option::from(Scalar::from_canonical_bytes(bits))
             .ok_or(TokenError(InternalError::ScalarFormatError))?;
 
-        let Y = &k * &constants::RISTRETTO_BASEPOINT_TABLE;
+        let Y: RistrettoPoint = k * constants::RISTRETTO_BASEPOINT_POINT;
 
         Ok(SigningKey {
             public_key: PublicKey(Y.compress()),
@@ -510,9 +510,9 @@ impl VerificationKey {
     /// Use the `VerificationKey` to "sign" a message, producing a `VerificationSignature`
     pub fn sign<D>(&self, message: &[u8]) -> VerificationSignature
     where
-        D: Mac<OutputSize = U64> + NewMac,
+        D: Mac<OutputSize = U64> + KeyInit,
     {
-        let mut mac = D::new_varkey(self.0.as_ref()).unwrap();
+        let mut mac = <D as Mac>::new_from_slice(self.0.as_ref()).unwrap();
         mac.update(message);
 
         VerificationSignature(mac.finalize().into_bytes())
@@ -522,7 +522,7 @@ impl VerificationKey {
     /// provided `VerificationSignature`
     pub fn verify<D>(&self, sig: &VerificationSignature, message: &[u8]) -> bool
     where
-        D: Mac<OutputSize = U64> + NewMac,
+        D: Mac<OutputSize = U64> + KeyInit,
     {
         &self.sign::<D>(message) == sig
     }
@@ -584,8 +584,6 @@ mod tests {
     use rand::rngs::OsRng;
     use sha2::Sha512;
 
-    use base64;
-
     use super::*;
     type HmacSha512 = Hmac<Sha512>;
 
@@ -605,9 +603,7 @@ mod tests {
             ("N8oRiMuSrYdp9TMKp++AP8ridXqdX6BoPOucx2eRCQE=", "mnikks9ySHzZGMgoPZ0SRA8/JJkMh5aA+m3eqeMfqTE=", "9sNH3G618rH0vy3TKBMNRQDKOb66LUKBo9jOtMsezeN4sgAp+2pMVDMS5BATkVxXAW5dpoGUTMJ3+cfnX0plSg==", "f44zH9r/YnCyaHZnKtEc/68diotEo1GjQ5MWepNEXAk=", "EEH0FTbmxN5XoXnAHmIH0y4VjcixJ5U9T8WqXgP2IAg=", "Km0KASMeIqj0s5vswz+WEYptTx2Y0fOb9cVjb+UKexw=", "lNDdKND+R/JmDrM08Q7w7ePoXT7/hgzGU6xVBU5RFig="),
             ("Nye8fMOQJv1HjCY6qxG0Br661wjd8OwNI1O0ZbkmGAc=", "5szoRS3/9jdVTmhswiS9yyaLeC2I0CfBAUzfe0zGjz8=", "OkOqxU+boJmNIhmzusoRGUDVJLfPlGd9bFV3UPpNueEHfu21um4zwQSuJUQ8hr8VgzU63fb93Rmk/0kRiOPUhw==", "ZBztTnJvQKmPkxfgzGzufhRa6o4oUPublpOIhODHKA4=", "lD1eLLmRw7ebLOd51OQSps51cZGTIg2DM+GL38bQQww=", "qA27hu9S60UX0jfnWJQgUBllQvfOPu+jQVkphi6Sv24=", "HhPZFQiNAYzG+niNmUiWut2g/YMhox86h1XyZypQfVk="),
         ];
-        for i in 0..vectors.len() {
-            let (k, Y, seed, r, P, Q, W) = vectors[i];
-
+        for (k, Y, seed, r, P, Q, W) in vectors {
             let server_key = SigningKey::decode_base64(k).unwrap();
             let seed = base64::decode(seed).unwrap();
 
@@ -635,7 +631,7 @@ mod tests {
             W_bits.copy_from_slice(&W_bytes[..32]);
             let W = CompressedRistretto(W_bits);
 
-            let unblinded_token_expected = UnblindedToken { W: W, t: token.t };
+            let unblinded_token_expected = UnblindedToken { W, t: token.t };
             assert!(unblinded_token.encode_base64() == unblinded_token_expected.encode_base64());
         }
     }

@@ -1,4 +1,4 @@
-# challenge-bypass-ristretto [![](https://img.shields.io/crates/v/challenge-bypass-ristretto.svg)](https://crates.io/crates/challenge-bypass-ristretto) [![](https://docs.rs/challenge-bypass-ristretto/badge.svg)](https://docs.rs/challenge-bypass-ristretto) [![Build Status](https://travis-ci.org/brave-intl/challenge-bypass-ristretto.svg?branch=master)](https://travis-ci.org/brave-intl/challenge-bypass-ristretto)
+# challenge-bypass-ristretto [![](https://img.shields.io/crates/v/challenge-bypass-ristretto.svg)](https://crates.io/crates/challenge-bypass-ristretto) [![](https://docs.rs/challenge-bypass-ristretto/badge.svg)](https://docs.rs/challenge-bypass-ristretto) [![Build Status](https://github.com/brave-intl/challenge-bypass-ristretto/workflows/CI/badge.svg)](https://github.com/brave-intl/challenge-bypass-ristretto/actions)
 
 **A rust implemention of the
 [privacy pass cryptographic protocol](https://www.petsymposium.org/2018/files/papers/issue3/popets-2018-0026.pdf)
@@ -99,10 +99,6 @@ The optional features include `base64` and `serde`.
 * `base64` exposes methods for base64 encoding / decoding of the various structures.
 * `serde` implements the [serde](https://serde.rs) `Serialize` / `Deserialize` traits.
 
-`merlin` is an experimental feature that uses [merlin](https://github.com/dalek-cryptography/merlin) to implement the DLEQ proofs. This diverges from
-the original protocol specified in the privacy pass paper. It is not yet stable / intended for use and
-is implemented in [`src/dleq_merlin.rs`].
-
 # Development
 
 Install rust.
@@ -115,6 +111,5 @@ Run `cargo build`
 
 Run `cargo test`
 
-[`src/dleq_merlin.rs`]: src/dleq_merlin.rs
 [`tests/e2e.rs`]: tests/e2e.rs
 [a more detailed writeup is also available]: https://docs.rs/challenge-bypass-ristretto#cryptographic-protocol
