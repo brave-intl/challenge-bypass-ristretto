@@ -1,5 +1,4 @@
 #![no_std]
-#![cfg_attr(all(feature = "alloc", not(feature = "std")), feature(alloc))]
 #![deny(missing_docs)]
 //! [`tests/e2e.rs`]: javascript:void(0)
 //! [a more detailed writeup is also available]: #cryptographic-protocol
@@ -18,7 +17,7 @@
 #![doc = include_str!("../README.md")]
 #![doc = include_str!("../docs/PROTOCOL.md")]
 
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(not(feature = "std"))]
 extern crate alloc;
 
 #[cfg(any(test, feature = "std"))]

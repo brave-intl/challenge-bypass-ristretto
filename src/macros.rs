@@ -4,13 +4,13 @@
 macro_rules! impl_base64 {
     ($t:ident) => {
         impl $t {
-            #[cfg(all(feature = "alloc", not(feature = "std")))]
+            #[cfg(not(feature = "std"))]
             /// Encode to a base64 string
             pub fn encode_base64(&self) -> ::alloc::string::String {
                 ::base64::encode(&self.to_bytes()[..])
             }
 
-            #[cfg(all(feature = "std"))]
+            #[cfg(feature = "std")]
             /// Encode to a base64 string
             pub fn encode_base64(&self) -> ::std::string::String {
                 ::base64::encode(&self.to_bytes()[..])
