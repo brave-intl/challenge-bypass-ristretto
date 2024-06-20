@@ -15,7 +15,7 @@ exclude = [
 
 [dependencies]
 crypto-mac = "0.11"
-curve25519-dalek = { version = "4", default-features = false, features = ["precomputed-tables", "zeroize", "rand_core", "digest"]}
+curve25519-dalek = { version = "4", default-features = false, features = ["alloc", "precomputed-tables", "zeroize", "rand_core", "digest"]}
 digest = "0.10"
 hmac = "0.12"
 rand = { version = "0.8", default-features = false }
@@ -43,8 +43,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 
 [features]
 default = ["std"]
-std = ["alloc", "subtle/std"]
-alloc = ["curve25519-dalek/alloc"]
+std = ["subtle/std"]
 serde_base64 = ["serde", "base64"]
 
 [package.metadata.docs.rs]
