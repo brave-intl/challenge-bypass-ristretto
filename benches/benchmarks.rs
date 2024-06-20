@@ -31,7 +31,7 @@ pub fn e2e_server_benchmarks(c: &mut Criterion) {
 
     let signing_req = client.create_tokens(n_tokens);
 
-    c.bench_function("sing pre-tokens", |b| {
+    c.bench_function("sign pre-tokens", |b| {
         b.iter(|| {
             let _signing_resp = server.sign_tokens(signing_req.clone());
         });
@@ -72,7 +72,6 @@ struct Client {
     unblinded_tokens: Vec<UnblindedToken>,
 }
 
-#[cfg(not(feature = "merlin"))]
 impl Client {
     fn create_tokens(&mut self, n: u8) -> SigningRequest {
         let mut rng = OsRng;
@@ -137,7 +136,6 @@ struct Server {
     spent_tokens: Vec<TokenPreimage>,
 }
 
-#[cfg(not(feature = "merlin"))]
 impl Server {
     fn sign_tokens(&self, req: SigningRequest) -> SigningResponse {
         let mut rng = OsRng;
