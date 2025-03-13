@@ -352,7 +352,7 @@ impl BatchDLEQProof {
 
 #[cfg(test)]
 mod tests {
-    use base64::{prelude::BASE64_STANDARD, engine::Engine as _};
+    use base64::{engine::Engine as _, prelude::BASE64_STANDARD};
     use curve25519_dalek::ristretto::CompressedRistretto;
     use rand::rngs::OsRng;
     use sha2::Sha512;

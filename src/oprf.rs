@@ -580,7 +580,7 @@ impl VerificationSignature {
 
 #[cfg(test)]
 mod tests {
-    use base64::{prelude::BASE64_STANDARD, engine::Engine as _};
+    use base64::{engine::Engine as _, prelude::BASE64_STANDARD};
     use hmac::Hmac;
     use rand::rngs::OsRng;
     use sha2::Sha512;
