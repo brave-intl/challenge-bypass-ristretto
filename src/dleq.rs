@@ -352,6 +352,7 @@ impl BatchDLEQProof {
 
 #[cfg(test)]
 mod tests {
+    use base64::prelude::*;
     use curve25519_dalek::ristretto::CompressedRistretto;
     use rand::rngs::OsRng;
     use sha2::Sha512;
@@ -398,14 +399,14 @@ mod tests {
 
             assert_eq!(server_key.public_key.encode_base64(), Y);
 
-            let P_bytes = base64::decode(P).unwrap();
+            let P_bytes = BASE64_STANDARD.decode(P).unwrap();
             let mut P_bits: [u8; 32] = [0u8; 32];
             P_bits.copy_from_slice(&P_bytes[..32]);
             let P = CompressedRistretto(P_bits).decompress().unwrap();
 
             let Q = P * server_key.k;
 
-            assert_eq!(base64::encode(&Q.compress().to_bytes()[..]), Q_b64);
+            assert_eq!(BASE64_STANDARD.encode(&Q.compress().to_bytes()[..]), Q_b64);
 
             let seed: [u8; 32] = [0u8; 32];
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
@@ -455,8 +456,8 @@ mod tests {
                 BatchDLEQProof::calculate_composites::<Sha512>(&P, &Q, &server_key.public_key)
                     .unwrap();
 
-            assert_eq!(base64::encode(&M.compress().to_bytes()[..]), M_b64);
-            assert_eq!(base64::encode(&Z.compress().to_bytes()[..]), Z_b64);
+            assert_eq!(BASE64_STANDARD.encode(&M.compress().to_bytes()[..]), M_b64);
+            assert_eq!(BASE64_STANDARD.encode(&Z.compress().to_bytes()[..]), Z_b64);
 
             let seed: [u8; 32] = [0u8; 32];
             let mut prng: ChaChaRng = SeedableRng::from_seed(seed);
