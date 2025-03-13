@@ -1,0 +1,24 @@
+name: Tests (nostd)
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  test-nostd:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+
+    - name: Check
+      run: cargo check --no-default-features --all-targets
+
+    - name: Test no features
+      run: cargo test --release --no-default-features
+
+    - name: Test serde_base64 feature
+      run: cargo test --release --no-default-features --features serde_base64

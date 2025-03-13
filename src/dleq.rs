@@ -1,4 +1,4 @@
-#[cfg(all(feature = "alloc", not(feature = "std")))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 #[cfg(feature = "std")]
