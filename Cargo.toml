@@ -2,7 +2,7 @@
 authors = ["eV <ev@7pr.xyz>"]
 edition = "2018"
 name = "challenge-bypass-ristretto"
-version = "2.0.0"
+version = "2.0.1"
 readme = "README.md"
 license = "MPL-2.0"
 repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
@@ -14,7 +14,6 @@ exclude = [
 ]
 
 [dependencies]
-crypto-mac = "0.11"
 curve25519-dalek = { version = "4", default-features = false, features = ["precomputed-tables", "zeroize", "rand_core", "digest"]}
 digest = "0.10"
 hmac = "0.12"
