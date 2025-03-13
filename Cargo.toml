@@ -34,12 +34,12 @@ version = "^1.0.0"
 default-features = false
 
 [dev-dependencies]
-serde_json = "1.0"
-serde = { version = "^1.0.0", features = ["derive"] }
-sha2 = "0.10"
-base64 = "0.13"
-rand = { version = "0.8", default-features = true }
-criterion = { version = "0.5", features = ["html_reports"] }
+serde_json = "=1.0.140"
+serde = { version = "=1.0.219", features = ["derive"] }
+sha2 = "=0.10.8"
+base64 = "=0.13.1"
+rand = { version = "=0.8.5", default-features = true }
+criterion = { version = "=0.5.1", features = ["html_reports"] }
 
 [features]
 default = ["std"]
