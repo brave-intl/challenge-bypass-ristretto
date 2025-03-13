@@ -45,6 +45,7 @@ default = ["std"]
 std = ["alloc", "subtle/std"]
 alloc = ["curve25519-dalek/alloc"]
 serde_base64 = ["serde", "base64"]
+cbindgen = []
 
 [package.metadata.docs.rs]
 rustdoc-args = [
