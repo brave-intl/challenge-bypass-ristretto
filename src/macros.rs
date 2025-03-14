@@ -7,19 +7,23 @@ macro_rules! impl_base64 {
             #[cfg(all(feature = "alloc", not(feature = "std")))]
             /// Encode to a base64 string
             pub fn encode_base64(&self) -> ::alloc::string::String {
-                ::base64::encode(&self.to_bytes()[..])
+                use base64::Engine;
+                base64::prelude::BASE64_STANDARD.encode(&self.to_bytes().to_vec())
             }
 
             #[cfg(all(feature = "std"))]
             /// Encode to a base64 string
             pub fn encode_base64(&self) -> ::std::string::String {
-                ::base64::encode(&self.to_bytes()[..])
+                use base64::Engine;
+                base64::prelude::BASE64_STANDARD.encode(&self.to_bytes().to_vec())
             }
 
             /// Decode from a base64 string
             pub fn decode_base64(s: &str) -> Result<Self, TokenError> {
-                let bytes =
-                    ::base64::decode(s).or(Err(TokenError(InternalError::DecodingError)))?;
+                use base64::Engine;
+                let bytes = base64::prelude::BASE64_STANDARD
+                    .decode(s)
+                    .or(Err(TokenError(InternalError::DecodingError)))?;
                 $t::from_bytes(&bytes)
             }
         }

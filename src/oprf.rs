@@ -580,6 +580,7 @@ impl VerificationSignature {
 
 #[cfg(test)]
 mod tests {
+    use base64::{engine::Engine as _, prelude::BASE64_STANDARD};
     use hmac::Hmac;
     use rand::rngs::OsRng;
     use sha2::Sha512;
@@ -605,11 +606,11 @@ mod tests {
         ];
         for (k, Y, seed, r, P, Q, W) in vectors {
             let server_key = SigningKey::decode_base64(k).unwrap();
-            let seed = base64::decode(seed).unwrap();
+            let seed = BASE64_STANDARD.decode(seed).unwrap();
 
             assert!(server_key.public_key.encode_base64() == Y);
 
-            let r_bytes = base64::decode(r).unwrap();
+            let r_bytes = BASE64_STANDARD.decode(r).unwrap();
             let mut r_bits: [u8; 32] = [0u8; 32];
             r_bits.copy_from_slice(&r_bytes);
             let r = Scalar::from_canonical_bytes(r_bits).unwrap();
@@ -626,7 +627,7 @@ mod tests {
 
             let unblinded_token = token.unblind(&signed_token).unwrap();
 
-            let W_bytes = base64::decode(W).unwrap();
+            let W_bytes = BASE64_STANDARD.decode(W).unwrap();
             let mut W_bits: [u8; 32] = [0u8; 32];
             W_bits.copy_from_slice(&W_bytes[..32]);
             let W = CompressedRistretto(W_bits);
