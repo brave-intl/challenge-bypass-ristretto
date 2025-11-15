@@ -7,6 +7,9 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
 jobs:
   security_audit:
     runs-on: ubuntu-latest
