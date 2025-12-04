@@ -29,6 +29,8 @@ pub const SIGNED_TOKEN_LENGTH: usize = 32;
 pub const UNBLINDED_TOKEN_LENGTH: usize = 96;
 /// The length of a `VerificationSignature`, in bytes.
 pub const VERIFICATION_SIGNATURE_LENGTH: usize = 64;
+/// The length of wide scalar input, in bytes.
+pub const SCALAR_WIDE_INPUT_LENGTH: usize = 64;
 
 /// A `TokenPreimage` is a slice of bytes which can be hashed to a `RistrettoPoint`.
 ///
@@ -326,6 +328,24 @@ impl SigningKey {
         }
     }
 
+    /// Construct a `SigningKey` from 64 random bytes.
+    pub fn from_random_bytes(bytes: &[u8]) -> Result<SigningKey, TokenError> {
+        if bytes.len() != SCALAR_WIDE_INPUT_LENGTH {
+            return Err(TokenError(InternalError::BytesLengthError {
+                name: "SigningKey random bytes",
+                length: SCALAR_WIDE_INPUT_LENGTH,
+            }));
+        }
+
+        let mut bytes_array = [0u8; SCALAR_WIDE_INPUT_LENGTH];
+        bytes_array.copy_from_slice(bytes);
+
+        let scalar = Scalar::from_bytes_mod_order_wide(&bytes_array);
+        let scalar_bytes = scalar.to_bytes();
+
+        Self::from_bytes(&scalar_bytes)
+    }
+
     /// Signs the provided `BlindedToken`
     ///
     /// Returns None if the `BlindedToken` point is not valid.
@@ -584,6 +604,7 @@ mod tests {
     use hmac::Hmac;
     use rand::rngs::OsRng;
     use sha2::Sha512;
+    use std::vec::Vec;
 
     use super::*;
     type HmacSha512 = Hmac<Sha512>;
@@ -680,5 +701,75 @@ mod tests {
         // and a failing equality
         let server_sig_fail = server_verification_key.sign::<HmacSha512>(b"failing test message");
         assert!(!(client_sig == server_sig_fail));
+    }
+
+    #[test]
+    fn from_random_bytes_test() {
+        let seeds = [
+            "nwfnvlVROHqYupd8cy0IDcsPKaBI42VpEsZTPjLueu0ptyF2nOZOQ9VxM7B02DnVMe0fKFEK+0Ws4QofS3lNbw==",
+            "5aaIdCtHxa37WdTfdv0dseUe4Dscqfgqyhc+24tyk0dOvpgPkE0QyRZEK0eDoOmEhgy2yVeznDjtj1HP+qaKTQ==",
+        ];
+
+        let mut keys = Vec::new();
+
+        // Test correctness and determinism
+        for seed in seeds.iter() {
+            let seed_bytes = BASE64_STANDARD.decode(seed).unwrap();
+            assert_eq!(seed_bytes.len(), SCALAR_WIDE_INPUT_LENGTH);
+
+            let key = SigningKey::from_random_bytes(&seed_bytes).unwrap();
+
+            let mut bytes_array = [0u8; SCALAR_WIDE_INPUT_LENGTH];
+            bytes_array.copy_from_slice(&seed_bytes);
+            let scalar = Scalar::from_bytes_mod_order_wide(&bytes_array);
+            let scalar_bytes = scalar.to_bytes();
+            let key_manual = SigningKey::from_bytes(&scalar_bytes).unwrap();
+
+            assert!(key.to_bytes() == key_manual.to_bytes());
+            assert!(key.public_key.encode_base64() == key_manual.public_key.encode_base64());
+
+            let key2 = SigningKey::from_random_bytes(&seed_bytes).unwrap();
+            assert!(key.to_bytes() == key2.to_bytes());
+            assert!(key.public_key.encode_base64() == key2.public_key.encode_base64());
+
+            keys.push(key);
+        }
+
+        // Test edge cases
+        let all_zeros = [0u8; SCALAR_WIDE_INPUT_LENGTH];
+        let all_ones = [0xFFu8; SCALAR_WIDE_INPUT_LENGTH];
+
+        let key_zeros = SigningKey::from_random_bytes(&all_zeros).unwrap();
+        let key_ones = SigningKey::from_random_bytes(&all_ones).unwrap();
+
+        // Test functionality
+        let mut rng = OsRng;
+        let token = Token::random::<Sha512, _>(&mut rng);
+        let blinded_token = token.blind();
+
+        for key in keys.iter().chain([&key_zeros, &key_ones]) {
+            assert_eq!(key.to_bytes().len(), SIGNING_KEY_LENGTH);
+            assert_eq!(key.public_key.encode_base64().len(), 44);
+            assert!(key.sign(&blinded_token).is_ok());
+        }
+
+        // Test uniqueness
+        let all_keys: Vec<&SigningKey> = keys.iter().chain([&key_zeros, &key_ones]).collect();
+        for i in 0..all_keys.len() {
+            for j in (i + 1)..all_keys.len() {
+                assert!(!(all_keys[i].to_bytes() == all_keys[j].to_bytes()));
+                assert!(
+                    !(all_keys[i].public_key.encode_base64()
+                        == all_keys[j].public_key.encode_base64())
+                );
+            }
+        }
+
+        // Test error handling
+        assert!(SigningKey::from_random_bytes(&[0u8; 32]).is_err());
+        assert!(SigningKey::from_random_bytes(&[0u8; 63]).is_err());
+        assert!(SigningKey::from_random_bytes(&[0u8; 65]).is_err());
+        assert!(SigningKey::from_random_bytes(&[]).is_err());
+        assert!(SigningKey::from_random_bytes(&[0u8; 128]).is_err());
     }
 }
