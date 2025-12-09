@@ -10,7 +10,7 @@ use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::VartimeMultiscalarMul;
-use digest::generic_array::typenum::U64;
+use digest::typenum::U64;
 use digest::Digest;
 use rand::{CryptoRng, Rng, SeedableRng};
 use rand_chacha::ChaChaRng;
@@ -354,7 +354,7 @@ impl BatchDLEQProof {
 mod tests {
     use base64::{engine::Engine as _, prelude::BASE64_STANDARD};
     use curve25519_dalek::ristretto::CompressedRistretto;
-    use rand::rngs::OsRng;
+    use rand::{rngs::OsRng, TryRngCore};
     use sha2::Sha512;
 
     use super::*;
@@ -363,7 +363,8 @@ mod tests {
     #[test]
     #[allow(non_snake_case)]
     fn works() {
-        let mut rng = OsRng;
+        let mut _rng = OsRng;
+        let mut rng = _rng.unwrap_mut();
 
         let key1 = SigningKey::random(&mut rng);
         let key2 = SigningKey::random(&mut rng);
@@ -477,7 +478,8 @@ mod tests {
     fn batch_works() {
         use std::vec::Vec;
 
-        let mut rng = OsRng;
+        let mut _rng = OsRng;
+        let mut rng = _rng.unwrap_mut();
 
         let key = SigningKey::random(&mut rng);
 

@@ -3,9 +3,9 @@ use core::fmt::Debug;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
-use digest::generic_array::typenum::U64;
+use digest::typenum::U64;
 use digest::{Digest, KeyInit};
-use hmac::digest::generic_array::GenericArray;
+use hybrid_array::Array;
 use hmac::Mac;
 use rand::{CryptoRng, Rng};
 use subtle::{Choice, ConstantTimeEq};
@@ -512,7 +512,7 @@ impl VerificationKey {
     where
         D: Mac<OutputSize = U64> + KeyInit,
     {
-        let mut mac = <D as Mac>::new_from_slice(self.0.as_ref()).unwrap();
+        let mut mac = <D as KeyInit>::new_from_slice(self.0.as_ref()).unwrap();
         mac.update(message);
 
         VerificationSignature(mac.finalize().into_bytes())
@@ -531,7 +531,7 @@ impl VerificationKey {
 /// A `VerificationSignature` which can be verified given the `VerificationKey` and message
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Clone)]
-pub struct VerificationSignature(GenericArray<u8, U64>);
+pub struct VerificationSignature(Array<u8, U64>);
 
 #[cfg(any(test, feature = "base64"))]
 impl_base64!(VerificationSignature);
@@ -573,7 +573,7 @@ impl VerificationSignature {
             return Err(VerificationSignature::bytes_length_error());
         }
 
-        let arr: &GenericArray<u8, U64> = GenericArray::from_slice(bytes);
+        let arr: &Array<u8, U64> = Array::from_slice(bytes);
         Ok(VerificationSignature(*arr))
     }
 }
@@ -582,7 +582,7 @@ impl VerificationSignature {
 mod tests {
     use base64::{engine::Engine as _, prelude::BASE64_STANDARD};
     use hmac::Hmac;
-    use rand::rngs::OsRng;
+    use rand::{rngs::OsRng, TryRngCore};
     use sha2::Sha512;
 
     use super::*;
@@ -639,7 +639,8 @@ mod tests {
 
     #[test]
     fn works() {
-        let mut rng = OsRng;
+        let mut _rng = OsRng;
+        let mut rng = _rng.unwrap_mut();
 
         // Server setup
 
