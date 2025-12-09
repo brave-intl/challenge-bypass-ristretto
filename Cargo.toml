@@ -2,7 +2,7 @@
 authors = ["eV <ev@7pr.xyz>"]
 edition = "2018"
 name = "challenge-bypass-ristretto"
-version = "2.0.3"
+version = "2.0.4"
 readme = "README.md"
 license = "MPL-2.0"
 repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
