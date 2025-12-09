@@ -329,6 +329,9 @@ impl SigningKey {
     }
 
     /// Construct a `SigningKey` from 64 random bytes.
+    ///
+    /// The random bytes MUST be cryptographically strong, uniform random bytes
+    /// such as those output from a CSPRNG or appropriately seeded KDF.
     pub fn from_random_bytes(bytes: &[u8]) -> Result<SigningKey, TokenError> {
         if bytes.len() != SCALAR_WIDE_INPUT_LENGTH {
             return Err(TokenError(InternalError::BytesLengthError {
@@ -340,10 +343,12 @@ impl SigningKey {
         let mut bytes_array = [0u8; SCALAR_WIDE_INPUT_LENGTH];
         bytes_array.copy_from_slice(bytes);
 
-        let scalar = Scalar::from_bytes_mod_order_wide(&bytes_array);
-        let scalar_bytes = scalar.to_bytes();
-
-        Self::from_bytes(&scalar_bytes)
+        let k = Scalar::from_bytes_mod_order_wide(&bytes_array);
+        let Y = k * constants::RISTRETTO_BASEPOINT_POINT;
+        Ok(SigningKey {
+            k,
+            public_key: PublicKey(Y.compress()),
+        })
     }
 
     /// Signs the provided `BlindedToken`
