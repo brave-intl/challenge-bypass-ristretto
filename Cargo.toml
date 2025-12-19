@@ -37,7 +37,7 @@ serde = { version = "=1.0.219", features = ["derive"] }
 sha2 = "=0.10.9"
 base64 = "=0.22.1"
 rand = { version = "=0.8.5", default-features = true }
-criterion = { version = "=0.8.0", features = ["html_reports"] }
+criterion = { version = "=0.8.1", features = ["html_reports"] }
 
 [features]
 default = ["std"]
