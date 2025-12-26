@@ -3,7 +3,7 @@ module cbr-test-vector-generator
 go 1.25.5
 
 require (
-	github.com/bwesterb/go-ristretto v0.0.0-20190112090610-d0773d454d02
+	github.com/bwesterb/go-ristretto v1.2.3
 	github.com/sirupsen/logrus v1.9.3
 	github.com/tmthrgd/go-rand v0.0.0-20180829004326-9716d99b29d1
 )
