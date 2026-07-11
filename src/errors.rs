@@ -28,6 +28,9 @@ pub enum InternalError {
     LengthMismatchError,
     /// Decoding failed
     DecodingError,
+    /// HashToGroup(input) produced the group identity element (RFC 9497 §3.3.1
+    /// InvalidInputError).
+    InvalidInput,
 }
 
 impl Display for InternalError {
@@ -43,6 +46,7 @@ impl Display for InternalError {
             InternalError::VerifyError => write!(f, "Verification failed"),
             InternalError::LengthMismatchError => write!(f, "Inputs differed in length"),
             InternalError::DecodingError => write!(f, "Decoding failed"),
+            InternalError::InvalidInput => write!(f, "Invalid Input"),
         }
     }
 }
