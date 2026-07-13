@@ -50,7 +50,7 @@ impl Client {
             let token = Token::random::<Sha512, OsRng>(&mut rng);
 
             // client blinds the token
-            let blinded_token = token.blind::<Sha512>().unwrap();
+            let blinded_token = token.blind();
 
             // stores the token in it's local state
             self.tokens.push(token);
@@ -138,10 +138,7 @@ impl Server {
             assert!(!self.spent_tokens.contains(preimage));
 
             // server derives the unblinded token using it's key and the clients token preimage
-            let unblinded_token = self
-                .signing_key
-                .rederive_unblinded_token::<Sha512>(&preimage)
-                .unwrap();
+            let unblinded_token = self.signing_key.rederive_unblinded_token(preimage);
 
             // server derives the shared key from the unblinded token
             let verification_key = unblinded_token.derive_verification_key::<Sha512>();

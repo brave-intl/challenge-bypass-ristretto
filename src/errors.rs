@@ -28,8 +28,8 @@ pub enum InternalError {
     LengthMismatchError,
     /// Decoding failed
     DecodingError,
-    /// HashToGroup(input) produced the group identity element (RFC 9497 §3.3.1
-    /// InvalidInputError).
+    /// Per RFC 9497 Section 3.3.1, `HashToGroup` produced the group identity
+    /// element (InvalidInputError)
     InvalidInput,
 }
 
