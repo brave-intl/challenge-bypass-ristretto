@@ -1,8 +1,8 @@
 [package]
-authors = ["eV <ev@7pr.xyz>"]
+authors = ["Brave Software <security@brave.com>"]
 edition = "2018"
 name = "challenge-bypass-ristretto"
-version = "2.0.4"
+version = "2.1.0"
 readme = "README.md"
 license = "MPL-2.0"
 repository = "https://github.com/brave-intl/challenge-bypass-ristretto"
