@@ -3,6 +3,7 @@ use core::fmt::Debug;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
+use digest::core_api::BlockSizeUser;
 use digest::generic_array::typenum::U64;
 use digest::{Digest, KeyInit};
 use hmac::digest::generic_array::GenericArray;
@@ -10,6 +11,8 @@ use hmac::Mac;
 use rand::{CryptoRng, Rng};
 use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
+
+use curve25519_dalek::traits::IsIdentity;
 
 use crate::errors::{InternalError, TokenError};
 
@@ -31,6 +34,78 @@ pub const UNBLINDED_TOKEN_LENGTH: usize = 96;
 pub const VERIFICATION_SIGNATURE_LENGTH: usize = 64;
 /// The length of wide scalar input, in bytes.
 pub const SCALAR_WIDE_INPUT_LENGTH: usize = 64;
+
+/// Domain separation tag for the RFC 9497 hash-to-group derivation.
+pub const DST_HASH_TO_GROUP: &[u8] = b"HashToGroup-OPRFV1-\x00-ristretto255-SHA512";
+
+/// expand_message_xmd producing 64 bytes, per RFC 9380 (single-block form).
+fn expand_message_xmd_64_parts<D>(msg_parts: &[&[u8]], dst: &[u8]) -> [u8; 64]
+where
+    D: Digest<OutputSize = U64> + BlockSizeUser + Default,
+{
+    debug_assert!(dst.len() <= 255, "DST must be <= 255 bytes");
+
+    let dst_len = [dst.len() as u8];
+    let z_pad = GenericArray::<u8, <D as BlockSizeUser>::BlockSize>::default();
+    let l_i_b_str = [0u8, 64u8];
+
+    // b_0 = H(Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime)
+    let mut h = D::default();
+    h.update(z_pad.as_slice());
+    for part in msg_parts {
+        h.update(part);
+    }
+    h.update(l_i_b_str);
+    h.update([0u8]);
+    h.update(dst);
+    h.update(dst_len);
+    let b0 = h.finalize();
+
+    // b_1 = H(b_0 || I2OSP(1, 1) || DST_prime)
+    let mut h = D::default();
+    h.update(b0.as_slice());
+    h.update([1u8]);
+    h.update(dst);
+    h.update(dst_len);
+    let b1 = h.finalize();
+
+    let mut out = [0u8; 64];
+    out.copy_from_slice(b1.as_slice());
+    out
+}
+
+fn expand_message_xmd_64<D>(msg: &[u8], dst: &[u8]) -> [u8; 64]
+where
+    D: Digest<OutputSize = U64> + BlockSizeUser + Default,
+{
+    expand_message_xmd_64_parts::<D>(&[msg], dst)
+}
+
+/// Maps a byte string to a `RistrettoPoint`, per RFC 9380 hash_to_ristretto255.
+fn hash_to_group<D>(input: &[u8]) -> RistrettoPoint
+where
+    D: Digest<OutputSize = U64> + BlockSizeUser + Default,
+{
+    RistrettoPoint::from_uniform_bytes(&expand_message_xmd_64::<D>(input, DST_HASH_TO_GROUP))
+}
+
+/// The finalization hash, per RFC 9497 Section 3.3.1. Each variable-length
+/// input is length-prefixed with I2OSP(len, 2) so the encoding is unambiguous.
+fn finalize<D>(input: &[u8], unblinded: &[u8]) -> [u8; 64]
+where
+    D: Digest<OutputSize = U64> + Default,
+{
+    let mut hash = D::default();
+    hash.update((input.len() as u16).to_be_bytes());
+    hash.update(input);
+    hash.update((unblinded.len() as u16).to_be_bytes());
+    hash.update(unblinded);
+    hash.update(b"Finalize");
+
+    let mut out = [0u8; 64];
+    out.copy_from_slice(hash.finalize().as_slice());
+    out
+}
 
 /// A `TokenPreimage` is a slice of bytes which can be hashed to a `RistrettoPoint`.
 ///
@@ -62,6 +137,21 @@ impl Debug for TokenPreimage {
 impl TokenPreimage {
     pub(crate) fn T(&self) -> RistrettoPoint {
         RistrettoPoint::from_uniform_bytes(&self.0)
+    }
+
+    /// Maps this preimage onto the group with the RFC 9497 `HashToGroup`
+    /// derivation (RFC 9380 hash_to_ristretto255).
+    ///
+    /// Returns `InvalidInput` if the result is the group identity element.
+    pub(crate) fn hash_to_group_rfc<D>(&self) -> Result<RistrettoPoint, TokenError>
+    where
+        D: Digest<OutputSize = U64> + BlockSizeUser + Default,
+    {
+        let input_element = hash_to_group::<D>(&self.0);
+        if input_element.is_identity() {
+            return Err(TokenError(InternalError::InvalidInput));
+        }
+        Ok(input_element)
     }
 
     /// Convert this `TokenPreimage` to a byte array.
@@ -157,6 +247,19 @@ impl Token {
     /// Blinds the `Token`, returning a `BlindedToken` to be sent to the server.
     pub fn blind(&self) -> BlindedToken {
         BlindedToken((self.r * self.t.T()).compress())
+    }
+
+    /// Blinds the `Token` using the RFC 9497 `HashToGroup` point derivation
+    /// (RFC 9380 hash_to_ristretto255), returning a `BlindedToken`.
+    ///
+    /// Returns `InvalidInput` if the preimage maps to the group identity.
+    pub fn blind_rfc<D>(&self) -> Result<BlindedToken, TokenError>
+    where
+        D: Digest<OutputSize = U64> + BlockSizeUser + Default,
+    {
+        Ok(BlindedToken(
+            (self.r * self.t.hash_to_group_rfc::<D>()?).compress(),
+        ))
     }
 
     /// Using the blinding factor of the original `Token`, unblind a `SignedToken`
@@ -374,6 +477,24 @@ impl SigningKey {
         }
     }
 
+    /// Rederives an `UnblindedToken` using the RFC 9497 `HashToGroup` point
+    /// derivation (RFC 9380 hash_to_ristretto255) on the provided preimage.
+    ///
+    /// Clients that derive their point the same way verify against this
+    /// rederivation; `rederive_unblinded_token` serves the original derivation.
+    pub fn rederive_unblinded_token_rfc<D>(
+        &self,
+        t: &TokenPreimage,
+    ) -> Result<UnblindedToken, TokenError>
+    where
+        D: Digest<OutputSize = U64> + BlockSizeUser + Default,
+    {
+        Ok(UnblindedToken {
+            t: *t,
+            W: (self.k * t.hash_to_group_rfc::<D>()?).compress(),
+        })
+    }
+
     /// Convert this `SigningKey` to a byte array.
     pub fn to_bytes(&self) -> [u8; SIGNING_KEY_LENGTH] {
         self.k.to_bytes()
@@ -483,6 +604,16 @@ impl UnblindedToken {
         output_bytes.copy_from_slice(output.as_slice());
 
         VerificationKey(output_bytes)
+    }
+
+    /// Derive the `VerificationKey` using the RFC 9497 finalization over the
+    /// preimage and the unblinded point. Pairs with the RFC `HashToGroup`
+    /// point derivation.
+    pub fn derive_verification_key_rfc<D>(&self) -> VerificationKey
+    where
+        D: Digest<OutputSize = U64> + Default,
+    {
+        VerificationKey(finalize::<D>(self.t.0.as_ref(), self.W.as_bytes()))
     }
 
     /// Convert this `UnblindedToken` to a byte array.
@@ -706,6 +837,101 @@ mod tests {
         // and a failing equality
         let server_sig_fail = server_verification_key.sign::<HmacSha512>(b"failing test message");
         assert!(!(client_sig == server_sig_fail));
+    }
+
+    #[test]
+    fn expand_message_xmd_64_vector() {
+        // Cross-implementation vector: the server (Go) reimplements
+        // expand_message_xmd and must produce byte-identical output.
+        let input = [0x42u8; TOKEN_PREIMAGE_LENGTH];
+        let xmd = expand_message_xmd_64::<Sha512>(&input, DST_HASH_TO_GROUP);
+        let point = hash_to_group::<Sha512>(&input).compress();
+
+        let mut xmd_hex = std::string::String::new();
+        for b in xmd.iter() {
+            xmd_hex.push_str(&std::format!("{:02x}", b));
+        }
+        let mut point_hex = std::string::String::new();
+        for b in point.as_bytes().iter() {
+            point_hex.push_str(&std::format!("{:02x}", b));
+        }
+
+        assert_eq!(
+            xmd_hex,
+            "da0077922b449d7eca15fead64dc05ae9198226d4a3429fb6bf5c0dee5ea573f\
+             750c230e86efed8c03a768dd2f76ce596278236fe7cb807eea98d6381792eb90"
+        );
+        assert_eq!(
+            point_hex,
+            "dadc88ba93de7fb16e1fff435e9d364ed752477fff21e84417849f7c95283910"
+        );
+    }
+
+    #[allow(non_snake_case)]
+    #[test]
+    fn rederive_unblinded_token_rfc_test() {
+        let mut rng = OsRng;
+
+        let server_key = SigningKey::random(&mut rng);
+
+        // The client generates a token as usual and blinds it with the RFC
+        // HashToGroup point derivation. The token preimage (the value
+        // transmitted at redemption) is unchanged.
+        let token = Token::random::<Sha512, _>(&mut rng);
+        let blinded_token = token.blind_rfc::<Sha512>().unwrap();
+        let signed_token = server_key.sign(&blinded_token).unwrap();
+        let unblinded_token = token.unblind(&signed_token).unwrap();
+        let client_sig = unblinded_token
+            .derive_verification_key_rfc::<Sha512>()
+            .sign::<HmacSha512>(b"test message");
+
+        // The server rederives from the transmitted preimage using the RFC
+        // HashToGroup path and the RFC finalization.
+        let server_sig = server_key
+            .rederive_unblinded_token_rfc::<Sha512>(&unblinded_token.t)
+            .unwrap()
+            .derive_verification_key_rfc::<Sha512>()
+            .sign::<HmacSha512>(b"test message");
+        assert!(client_sig == server_sig);
+
+        // The original derivation over the same preimage does not match.
+        let other_sig = server_key
+            .rederive_unblinded_token(&unblinded_token.t)
+            .derive_verification_key::<Sha512>()
+            .sign::<HmacSha512>(b"test message");
+        assert!(!(client_sig == other_sig));
+    }
+
+    #[test]
+    fn finalize_vector() {
+        // Cross-implementation vector: the server (Go) reimplements the
+        // RFC 9497 finalization and the HMAC-SHA512 verification, and must
+        // produce byte-identical output.
+        let preimage = [0x42u8; TOKEN_PREIMAGE_LENGTH];
+        let point = [0x11u8; 32];
+
+        let key = finalize::<Sha512>(&preimage, &point);
+        let sig = VerificationKey(key).sign::<HmacSha512>(b"test message");
+
+        let mut key_hex = std::string::String::new();
+        for b in key.iter() {
+            key_hex.push_str(&std::format!("{:02x}", b));
+        }
+        let mut sig_hex = std::string::String::new();
+        for b in sig.to_bytes().iter() {
+            sig_hex.push_str(&std::format!("{:02x}", b));
+        }
+
+        assert_eq!(
+            key_hex,
+            "a6c72d096fd0b5d02530151d6fc33c9dd8267809bf837a2a8f67a8bf07b35173\
+             8d841e4065f841ed8fe1fcbc9b4f9fabe606a42a0c1135d311d3a7244e3c037d"
+        );
+        assert_eq!(
+            sig_hex,
+            "2754d121b3f5afbb80f0cad7bde8efdea0872f3a366467d5b23e15ff11985476\
+             3663da33147c49ffa140c97de0869911b4a871158d4f18dd2229d446f5920e4a"
+        );
     }
 
     #[test]
