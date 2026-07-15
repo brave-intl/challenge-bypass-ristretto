@@ -24,7 +24,7 @@ pub fn e2e_server_benchmarks(c: &mut Criterion) {
         unblinded_tokens: Vec::new(),
     };
 
-    let mut server = Server {
+    let server = Server {
         signing_key,
         spent_tokens: Vec::new(),
     };
@@ -37,12 +37,28 @@ pub fn e2e_server_benchmarks(c: &mut Criterion) {
         });
     });
 
+    let signing_resp = server.sign_tokens(signing_req);
+    client.store_signed_tokens(signing_resp).unwrap();
+
     let redeem_request = client.redeem_tokens();
 
     c.bench_function("redeem tokens", |b| {
-        b.iter(|| {
-            server.redeem_tokens(&redeem_request);
-        });
+        b.iter_batched(
+            || {
+                // Setup: create a fresh server with empty spent_tokens. This
+                // is required because otherwise the server would reject already
+                // spent tokens in the benchmark iterations
+                Server {
+                    signing_key: server.signing_key.clone(),
+                    spent_tokens: Vec::new(),
+                }
+            },
+            |mut fresh_server| {
+                // Only this part is measured
+                fresh_server.redeem_tokens(&redeem_request);
+            },
+            criterion::BatchSize::SmallInput,
+        );
     });
 }
 
