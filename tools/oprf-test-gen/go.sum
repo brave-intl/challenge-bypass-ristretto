@@ -12,8 +12,8 @@ github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVs
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/tmthrgd/go-rand v0.0.0-20180829004326-9716d99b29d1 h1:Xs57r6RQ36fUaIgNguozp1WllmHsT2mqvNLdGLUgg8A=
-github.com/tmthrgd/go-rand v0.0.0-20180829004326-9716d99b29d1/go.mod h1:T0nbk2rWqXf6TX2dWB7B+ANwmLqTIpuFTzTXrUTLOwc=
+github.com/tmthrgd/go-rand v0.0.0-20190904060720-34764beea44d h1:+V6Teq5JYaGjPdzmh1eRYWiTwvht2gWPrnFdEo+wv4U=
+github.com/tmthrgd/go-rand v0.0.0-20190904060720-34764beea44d/go.mod h1:T0nbk2rWqXf6TX2dWB7B+ANwmLqTIpuFTzTXrUTLOwc=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 h1:0A+M6Uqn+Eje4kHMK80dtF3JCXC4ykBgQG4Fe06QRhQ=
 golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
