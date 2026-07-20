@@ -16,7 +16,7 @@ exclude = [
 [dependencies]
 curve25519-dalek = { version = "4", default-features = false, features = ["precomputed-tables", "zeroize", "rand_core", "digest"]}
 digest = "0.10"
-hmac = "0.12"
+hmac = "0.13"
 rand = { version = "0.8", default-features = false }
 rand_chacha = "0.3"
 subtle = { version = "^2.2", default-features = false }
