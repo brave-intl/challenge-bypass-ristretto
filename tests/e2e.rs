@@ -5,7 +5,8 @@ extern crate serde;
 extern crate sha2;
 
 use hmac::Hmac;
-use rand::rngs::OsRng;
+use rand::rand_core::UnwrapErr;
+use rand::rngs::SysRng;
 use sha2::Sha512;
 
 #[cfg(feature = "serde_base64")]
@@ -43,11 +44,11 @@ struct Client {
 
 impl Client {
     fn create_tokens(&mut self, n: u8) -> SigningRequest {
-        let mut rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         for _i in 0..n {
             // client prepares a random token and blinding scalar
-            let token = Token::random::<Sha512, OsRng>(&mut rng);
+            let token = Token::random::<Sha512, _>(&mut rng);
 
             // client blinds the token
             let blinded_token = token.blind();
@@ -107,7 +108,7 @@ struct Server {
 
 impl Server {
     fn sign_tokens(&self, req: SigningRequest) -> SigningResponse {
-        let mut rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         let public_key = self.signing_key.public_key;
 
@@ -117,7 +118,7 @@ impl Server {
             .filter_map(|t| self.signing_key.sign(t).ok())
             .collect();
 
-        let batch_proof = BatchDLEQProof::new::<Sha512, OsRng>(
+        let batch_proof = BatchDLEQProof::new::<Sha512, _>(
             &mut rng,
             &req.blinded_tokens,
             &signed_tokens,
@@ -157,7 +158,7 @@ impl Server {
 
 #[test]
 fn e2e_works() {
-    let mut rng = OsRng;
+    let mut rng = UnwrapErr(SysRng);
     let signing_key = SigningKey::random(&mut rng);
 
     let mut client = Client {
@@ -182,7 +183,7 @@ fn e2e_works() {
 #[cfg(feature = "serde_base64")]
 #[test]
 fn e2e_serde_works() {
-    let mut rng = OsRng;
+    let mut rng = UnwrapErr(SysRng);
     let signing_key = SigningKey::random(&mut rng);
 
     let mut client = Client {
