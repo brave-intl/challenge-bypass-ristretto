@@ -3,11 +3,10 @@ use core::fmt::Debug;
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
-use digest::core_api::BlockSizeUser;
-use digest::generic_array::typenum::U64;
-use digest::{Digest, KeyInit};
-use hmac::digest::generic_array::GenericArray;
-use hmac::Mac;
+use digest::array::Array;
+use digest::block_api::BlockSizeUser;
+use digest::consts::U64;
+use digest::{Digest, KeyInit, Mac};
 use rand::{CryptoRng, Rng};
 use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
@@ -46,7 +45,7 @@ where
     debug_assert!(dst.len() <= 255, "DST must be <= 255 bytes");
 
     let dst_len = [dst.len() as u8];
-    let z_pad = GenericArray::<u8, <D as BlockSizeUser>::BlockSize>::default();
+    let z_pad = Array::<u8, <D as BlockSizeUser>::BlockSize>::default();
     let l_i_b_str = [0u8, 64u8];
 
     // b_0 = H(Z_pad || msg || l_i_b_str || I2OSP(0, 1) || DST_prime)
@@ -213,7 +212,7 @@ impl Token {
         T: Rng + CryptoRng,
     {
         let mut seed = [0u8; 64];
-        rng.fill(&mut seed);
+        rng.fill_bytes(&mut seed);
         let blinding_scalar = Scalar::random(rng);
         Self::hash_from_bytes_with_blind::<D>(&seed, blinding_scalar)
     }
@@ -668,7 +667,7 @@ impl VerificationKey {
     where
         D: Mac<OutputSize = U64> + KeyInit,
     {
-        let mut mac = <D as Mac>::new_from_slice(self.0.as_ref()).unwrap();
+        let mut mac = <D as KeyInit>::new_from_slice(self.0.as_ref()).unwrap();
         mac.update(message);
 
         VerificationSignature(mac.finalize().into_bytes())
@@ -687,7 +686,7 @@ impl VerificationKey {
 /// A `VerificationSignature` which can be verified given the `VerificationKey` and message
 #[cfg_attr(not(feature = "cbindgen"), repr(C))]
 #[derive(Clone)]
-pub struct VerificationSignature(GenericArray<u8, U64>);
+pub struct VerificationSignature(Array<u8, U64>);
 
 #[cfg(any(test, feature = "base64"))]
 impl_base64!(VerificationSignature);
@@ -725,12 +724,11 @@ impl VerificationSignature {
 
     /// Construct a `VerificationSignature` from a slice of bytes.
     fn from_bytes(bytes: &[u8]) -> Result<VerificationSignature, TokenError> {
-        if bytes.len() != VERIFICATION_SIGNATURE_LENGTH {
-            return Err(VerificationSignature::bytes_length_error());
-        }
+        use core::convert::TryFrom;
 
-        let arr: &GenericArray<u8, U64> = GenericArray::from_slice(bytes);
-        Ok(VerificationSignature(*arr))
+        Array::try_from(bytes)
+            .map(VerificationSignature)
+            .map_err(|_| VerificationSignature::bytes_length_error())
     }
 }
 
@@ -738,7 +736,8 @@ impl VerificationSignature {
 mod tests {
     use base64::{engine::Engine as _, prelude::BASE64_STANDARD};
     use hmac::Hmac;
-    use rand::rngs::OsRng;
+    use rand::rand_core::UnwrapErr;
+    use rand::rngs::SysRng;
     use sha2::Sha512;
     use std::vec::Vec;
 
@@ -796,7 +795,7 @@ mod tests {
 
     #[test]
     fn works() {
-        let mut rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         // Server setup
 
@@ -870,7 +869,7 @@ mod tests {
     #[allow(non_snake_case)]
     #[test]
     fn rederive_unblinded_token_rfc_test() {
-        let mut rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         let server_key = SigningKey::random(&mut rng);
 
@@ -974,7 +973,7 @@ mod tests {
         let key_ones = SigningKey::from_random_bytes(&all_ones).unwrap();
 
         // Test functionality
-        let mut rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
         let token = Token::random::<Sha512, _>(&mut rng);
         let blinded_token = token.blind();
 
